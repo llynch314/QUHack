@@ -1,11 +1,14 @@
-"""Gemini chatbot wrapper with a mental-health system prompt and conversation memory."""
+"""Gemini chatbot wrapper with a mental-health system prompt and conversation memory.
+
+Uses Google's current Python SDK, `google-genai`.
+"""
 import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
 
 SYSTEM_PROMPT = """You are AttuneMind, a warm, supportive mental health companion.
 - Listen first. Reflect back what the person is feeling before offering suggestions.
@@ -18,17 +21,16 @@ SYSTEM_PROMPT = """You are AttuneMind, a warm, supportive mental health companio
   and urge them to contact the 988 Suicide & Crisis Lifeline (call or text 988 in
   the US) or emergency services right away."""
 
-_configured = False
+_client = None
 
 
-def _model():
-    global _configured
-    import google.generativeai as gemini  # imported lazily so tests run without it
+def _get_client():
+    global _client
+    from google import genai  # imported lazily so tests run without it
 
-    if not _configured:
-        gemini.configure(api_key=os.getenv("GEMINI_API_KEY"))
-        _configured = True
-    return gemini.GenerativeModel(MODEL_NAME, system_instruction=SYSTEM_PROMPT)
+    if _client is None:
+        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    return _client
 
 
 def generate_response(user_input, history=None, emotion=None):
@@ -37,10 +39,17 @@ def generate_response(user_input, history=None, emotion=None):
     history: list of {"sender": "user"|"model", "text": str}, oldest first.
     emotion: optional dominant emotion from the webcam (e.g. "sad").
     """
+    from google.genai import types
+
     try:
-        chat = _model().start_chat(history=[
-            {"role": m["sender"], "parts": [m["text"]]} for m in (history or [])
-        ])
+        chat = _get_client().chats.create(
+            model=MODEL_NAME,
+            config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+            history=[
+                types.Content(role=m["sender"], parts=[types.Part(text=m["text"])])
+                for m in (history or [])
+            ],
+        )
         message = user_input
         if emotion:
             message = (f"[Context: the user's facial expression currently looks {emotion}. "

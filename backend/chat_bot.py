@@ -1,36 +1,24 @@
-import google.generativeai as gemini
-from dotenv import load_dotenv
-import os
+"""Chat with AttuneMind in the terminal (same bot and system prompt as the website)."""
+from gemini_backend import MODEL_NAME, generate_response
 
-# Load environment variables
-load_dotenv()
 
-# Configure Gemini API
-gemini.configure(api_key=os.getenv('GEMINI_API_KEY'))
-
-# Initialize the chatbot
 def chatbot():
-    print("Welcome to AttuneMind! Type 'exit' to end the conversation.")
-    
-    # Initialize the Gemini model
-    model = gemini.GenerativeModel('gemini-2.0-flash')
-    
+    print(f"Welcome to AttuneMind! (model: {MODEL_NAME}) Type 'exit' to end the conversation.")
+    history = []
+
     while True:
-        # Get user input
-        user_input = input("You: ")
-        
-        # Exit the chatbot
-        if user_input.lower() == 'exit':
+        user_input = input("You: ").strip()
+        if not user_input:
+            continue
+        if user_input.lower() == "exit":
             print("AttuneMind: Goodbye! Take care.")
             break
-        
-        # Generate a response using Gemini
-        try:
-            response = model.generate_content(user_input)
-            print(f"AttuneMind: {response.text}")
-        except Exception as e:
-            print(f"AttuneMind: Sorry, I encountered an error. Please try again. Error: {e}")
 
-# Run the chatbot
-if __name__ == '__main__':
+        reply = generate_response(user_input, history)
+        print(f"AttuneMind: {reply}")
+        history += [{"sender": "user", "text": user_input},
+                    {"sender": "model", "text": reply}]
+
+
+if __name__ == "__main__":
     chatbot()
