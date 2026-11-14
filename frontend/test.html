@@ -115,7 +115,7 @@ blockquote{
       <p class="hello">Hello,</p>
       <h1 class="name" id="userName">Loading...</h1>
     </div>
-    <blockquote>“Small steps still move you forward.”</blockquote>
+    <blockquote id="inspirationalQuote"></blockquote>
   </section>
 
   <section class="right" aria-label="Your mood color">
@@ -136,6 +136,16 @@ blockquote{
 
 <script>
 (function(){
+
+  var quotes = [
+  "Small steps still move you forward.",
+  "You don't have to have it all figured out today.",
+  "Progress is progress, no matter how small.",
+  "Be kind to yourself as you grow."
+];
+
+var quote = quotes[Math.floor(Math.random() * quotes.length)];
+document.getElementById("inspirationalQuote").textContent = "“" + quote + "”";
   var userName = document.getElementById("userName");
   fetch("/api/me")
     .then(function(response){
