@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>attuneMind · Dashboard</title>
+<title>attunemind</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#F6EDCF; --header:#A9B99B; --ink:#2A3626; --ink-soft:#52604B;
@@ -29,7 +29,7 @@
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{
   margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
-  font-family:"Nexa","Montserrat","Helvetica Neue",Arial,sans-serif;
+  font-family:"Outfit",sans-serif;
   display:flex; flex-direction:column;
 }
 .bar{
@@ -100,8 +100,8 @@ blockquote{
   <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
     <span></span><span></span><span></span>
   </button>
-  <p class="brand">attuneMind</p>
-  <span class="page-label">Dashboard</span>
+  <p class="brand">attune<strong>mind</strong></p>
+  <span class="page-label">dashboard</span>
   <ul class="menu" id="menu" hidden>
     <li><a href="#dashboard">Dashboard</a></li>
     <li><a href="#history">Mood history</a></li>
@@ -113,7 +113,7 @@ blockquote{
   <section class="left" aria-label="Welcome">
     <div>
       <p class="hello">Hello,</p>
-      <h1 class="name" id="userName">USER</h1>
+      <h1 class="name" id="userName">Loading...</h1>
     </div>
     <blockquote>“Small steps still move you forward.”</blockquote>
   </section>
@@ -136,6 +136,23 @@ blockquote{
 
 <script>
 (function(){
+  var userName = document.getElementById("userName");
+  fetch("/api/me")
+    .then(function(response){
+      if(!response.ok) throw new Error("Could not load the signed-in user.");
+      return response.json();
+    })
+    .then(function(user){
+      if(typeof user.name !== "string" || !user.name.trim()) {
+        throw new Error("The signed-in user has no display name.");
+      }
+      userName.textContent = user.name;
+    })
+    .catch(function(error){
+      userName.textContent = "Unable to load your name";
+      console.error("Could not load the signed-in user's name.", error);
+    });
+
   var meanings = {
     Yellow:"Yellow means you feel happy and full of energy. It feels bright, like the sun.",
     Green:"Green means you feel calm and steady. Everything feels okay.",

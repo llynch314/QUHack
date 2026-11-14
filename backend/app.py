@@ -6,7 +6,9 @@ import secrets
 from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, g, jsonify, render_template, request, session
+from flask import (
+    Flask, g, jsonify, render_template, request, send_from_directory, session,
+)
 
 load_dotenv()
 
@@ -87,10 +89,22 @@ def privacy():
     return render_template('privacy.html')
 
 
+@app.route('/test')
+@login_required
+def test_dashboard():
+    return send_from_directory(FRONTEND_DIR, 'test.html')
+
+
 # ---------- JSON API ----------
 
 def _error(message, status):
     return jsonify(error=message), status
+
+
+@app.get('/api/me')
+@login_required
+def api_me():
+    return jsonify(name=g.user.name or 'there')
 
 
 @app.post('/api/chat')
