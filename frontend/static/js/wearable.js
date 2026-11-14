@@ -206,28 +206,7 @@
     };
     $('nudgeLink').addEventListener('click', () => { if (shownNudge) api(`/api/wearable/nudges/${shownNudge}/seen`, { method: 'POST' }).catch(() => {}); });
 
-    // ---------- demo panel ----------
-    document.querySelectorAll('[data-scenario]').forEach(b => {
-        b.onclick = async () => {
-            b.disabled = true;
-            try {
-                const r = await api('/api/wearable/demo/scenario', { method: 'POST', body: { scenario: b.dataset.scenario } });
-                log(`${b.dataset.scenario}: state=${r.state.state} (tier ${r.state.tier})${r.alert ? `, family alert ${r.alert.kind} ${r.alert.status}` : ', no family alert'}`);
-                await refreshState(false);
-                refreshChart(false);
-            } catch (e) {
-                log(`${b.dataset.scenario}: ERROR ${e.message}`);
-                if (e.data && e.data.consent_required) $('consent').scrollIntoView();
-            } finally { b.disabled = false; }
-        };
-    });
-    if ($('demoReset')) $('demoReset').onclick = async () => {
-        if (!confirm('Delete all demo wearable data (samples, states, alerts, reports)? Devices and settings are kept.')) return;
-        await api('/api/wearable/demo/reset', { method: 'POST' });
-        log('Demo data reset.');
-        shownNudge = null; emergencyKey = null;
-        refreshState(false); refreshChart(false); loadReports();
-    };
+    // The demo controls live on their own page (/demo), not in the patient's app.
     if ($('makeReport')) $('makeReport').onclick = async () => {
         const r = await api(`/api/patients/${PID}/wearable-report`, { method: 'POST' });
         log('Report created: ' + r.report.title);
@@ -351,4 +330,5 @@
     setInterval(refreshState, 5000);
     setInterval(refreshChart, 30000);
     setInterval(() => { loadDevices(true).catch(() => {}); }, 30000);
+    setInterval(() => { loadReports().catch(() => {}); }, 15000);
 })();

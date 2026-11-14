@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}AttuneMIND{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}attunemind{% endblock %}</title>
     <!-- Apply saved accessibility settings before paint, so the page doesn't flash. -->
     <script>
         try {
@@ -13,85 +13,99 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Lexend:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Lexend:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/attune.css') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to main content</a>
 
-    <header class="site-header">
-        <nav class="nav" aria-label="Main">
-            <a class="logo" href="{{ url_for('index') }}">AttuneMIND</a>
-            <ul class="nav-links">
-                {% if current_user and current_user.role == 'provider' %}
-                <li><a href="{{ url_for('care.provider_home') }}" {% if request.endpoint in ('care.provider_home', 'care.provider_patient') %}aria-current="page"{% endif %}>My Patients</a></li>
-                {% elif current_user and current_user.role == 'family' %}
-                <li><a href="{{ url_for('care.family_home') }}" {% if request.endpoint == 'care.family_home' %}aria-current="page"{% endif %}>Alerts</a></li>
-                <li><a href="{{ url_for('toolkit') }}" {% if request.endpoint == 'toolkit' %}aria-current="page"{% endif %}>Calm Toolkit</a></li>
-                {% else %}
-                <li><a href="{{ url_for('chat') }}" {% if request.endpoint == 'chat' %}aria-current="page"{% endif %}>Chat</a></li>
-                <li><a href="{{ url_for('toolkit') }}" {% if request.endpoint == 'toolkit' %}aria-current="page"{% endif %}>Calm Toolkit</a></li>
-                <li><a href="{{ url_for('report') }}" {% if request.endpoint == 'report' %}aria-current="page"{% endif %}>My Progress</a></li>
-                <li><a href="{{ url_for('care.care_team_page') }}" {% if request.endpoint == 'care.care_team_page' %}aria-current="page"{% endif %}>Care Team</a></li>
-                {# --- wearable --- #}<li><a href="{{ url_for('wearable.page') }}" {% if request.endpoint == 'wearable.page' %}aria-current="page"{% endif %}>My Watch</a></li>
-                {% endif %}
-            </ul>
-            <div class="nav-actions">
-                <details class="a11y-menu">
-                    <summary aria-label="Accessibility settings">Aa <span class="sr-only">Accessibility settings</span></summary>
-                    <div class="a11y-panel" role="group" aria-label="Accessibility settings">
-                        <fieldset>
-                            <legend>Text size</legend>
-                            <div class="seg" data-setting="size">
-                                <button type="button" data-value="">A</button>
-                                <button type="button" data-value="lg" style="font-size:1.15em">A</button>
-                                <button type="button" data-value="xl" style="font-size:1.3em">A</button>
-                                <button type="button" data-value="xxl" style="font-size:1.45em">A</button>
-                            </div>
-                        </fieldset>
-                        <fieldset>
-                            <legend>Font</legend>
-                            <div class="seg" data-setting="font">
-                                <button type="button" data-value="">Default</button>
-                                <button type="button" data-value="readable">Readable (dyslexia)</button>
-                                <button type="button" data-value="hyperlegible">Low vision</button>
-                            </div>
-                        </fieldset>
-                        <fieldset>
-                            <legend>Colors</legend>
-                            <div class="seg" data-setting="theme">
-                                <button type="button" data-value="">Auto</button>
-                                <button type="button" data-value="light">Light</button>
-                                <button type="button" data-value="dark">Dark</button>
-                                <button type="button" data-value="contrast">High contrast</button>
-                            </div>
-                        </fieldset>
-                        <fieldset>
-                            <legend>Motion</legend>
-                            <div class="seg" data-setting="motion">
-                                <button type="button" data-value="">Auto</button>
-                                <button type="button" data-value="reduce">Reduce motion</button>
-                            </div>
-                        </fieldset>
-                        <fieldset>
-                            <legend>Read aloud</legend>
-                            <div class="seg" data-setting="speak">
-                                <button type="button" data-value="">Off</button>
-                                <button type="button" data-value="on">Read replies aloud</button>
-                            </div>
-                        </fieldset>
-                    </div>
-                </details>
-                {% if current_user %}
-                    <form method="post" action="{{ url_for('auth.logout') }}">
-                        <a class="muted" href="{{ url_for('auth.account') }}" {% if request.endpoint == 'auth.account' %}aria-current="page"{% endif %}>{{ current_user.role_label }} account</a>
-                        <button class="btn btn-ghost" type="submit">Sign out</button>
-                    </form>
-                {% else %}
-                    <a class="btn btn-primary" href="{{ url_for('auth.signin', next=request.path) }}">Sign in</a>
-                {% endif %}
-            </div>
-        </nav>
+    <header class="bar">
+        <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+            <span></span><span></span><span></span>
+        </button>
+        <a class="brand" href="{{ url_for('index') }}"><img class="brand-mark" src="{{ url_for('static', filename='img/logo-mark.png') }}" alt="" width="256" height="281"><span>attune<strong>mind</strong></span></a>
+        <div class="bar-right">
+            <span class="page-label">{% block page_label %}{% endblock %}</span>
+            <details class="a11y-menu">
+                <summary aria-label="Accessibility settings">Aa</summary>
+                <div class="a11y-panel" role="group" aria-label="Accessibility settings">
+                    <fieldset>
+                        <legend>Text size</legend>
+                        <div class="seg" data-setting="size">
+                            <button type="button" data-value="">A</button>
+                            <button type="button" data-value="lg" style="font-size:1.15em">A</button>
+                            <button type="button" data-value="xl" style="font-size:1.3em">A</button>
+                            <button type="button" data-value="xxl" style="font-size:1.45em">A</button>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Font</legend>
+                        <div class="seg" data-setting="font">
+                            <button type="button" data-value="">Default</button>
+                            <button type="button" data-value="readable">Readable (dyslexia)</button>
+                            <button type="button" data-value="hyperlegible">Low vision</button>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Colors</legend>
+                        <div class="seg" data-setting="theme">
+                            <button type="button" data-value="">Auto</button>
+                            <button type="button" data-value="light">Light</button>
+                            <button type="button" data-value="dark">Dark</button>
+                            <button type="button" data-value="contrast">High contrast</button>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Motion</legend>
+                        <div class="seg" data-setting="motion">
+                            <button type="button" data-value="">Auto</button>
+                            <button type="button" data-value="reduce">Reduce motion</button>
+                        </div>
+                    </fieldset>
+                    <fieldset>
+                        <legend>Read aloud</legend>
+                        <div class="seg" data-setting="speak">
+                            <button type="button" data-value="">Off</button>
+                            <button type="button" data-value="on">Read replies aloud</button>
+                        </div>
+                    </fieldset>
+                </div>
+            </details>
+        </div>
+        <ul class="menu" id="menu" hidden>
+            {% macro item(href, label, endpoint=None) -%}
+                <li><a href="{{ href }}" {% if endpoint and request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ label }}</a></li>
+            {%- endmacro %}
+            {% if current_user and current_user.role == 'patient' %}
+                {# Patients use the one-page app in test.html; each tab is a #section there. #}
+                {{ item(url_for('test_dashboard') ~ '#dashboard', 'Dashboard') }}
+                {{ item(url_for('test_dashboard') ~ '#mood-history', 'Mood history') }}
+                {{ item(url_for('test_dashboard') ~ '#chatbot', 'Chatbot') }}
+                {{ item(url_for('test_dashboard') ~ '#toolkit', 'Calm Toolkit') }}
+                {{ item(url_for('test_dashboard') ~ '#care-team', 'Care Team') }}
+                {{ item(url_for('wearable.page'), 'My Watch', 'wearable.page') }}{# --- wearable --- #}
+                {{ item(url_for('test_dashboard') ~ '#settings', 'Settings') }}
+            {% elif current_user and current_user.role == 'provider' %}
+                {{ item(url_for('care.provider_home'), 'My patients', 'care.provider_home') }}
+                {{ item(url_for('auth.account'), 'Settings', 'auth.account') }}
+            {% elif current_user and current_user.role == 'family' %}
+                {{ item(url_for('care.family_home'), 'Alerts', 'care.family_home') }}
+                {{ item(url_for('toolkit'), 'Calm Toolkit', 'toolkit') }}
+                {{ item(url_for('auth.account'), 'Settings', 'auth.account') }}
+            {% else %}
+                {{ item(url_for('index'), 'Home', 'index') }}
+                {{ item(url_for('chat'), 'Chatbot', 'chat') }}
+                {{ item(url_for('toolkit'), 'Calm Toolkit', 'toolkit') }}
+            {% endif %}
+            {{ item(url_for('privacy'), 'Privacy', 'privacy') }}
+            {% if current_user %}
+                <li><form method="post" action="{{ url_for('auth.logout') }}"><button type="submit">Sign out</button></form></li>
+            {% else %}
+                <li><form method="get" action="{{ url_for('auth.signin') }}"><input type="hidden" name="next" value="{{ request.path }}"><button type="submit">Sign in</button></form></li>
+            {% endif %}
+        </ul>
     </header>
 
     {% with messages = get_flashed_messages() %}
@@ -110,6 +124,20 @@
         <p>AttuneMIND is a support tool, not a therapist or emergency service. <a href="{{ url_for('privacy') }}">Privacy &amp; disclosures</a></p>
     </footer>
 
+    <script>
+        // Hamburger menu (same behaviour as the dashboard)
+        (function () {
+            var btn = document.getElementById('menuBtn'), menu = document.getElementById('menu');
+            function setMenu(open) {
+                menu.hidden = !open;
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+            }
+            btn.addEventListener('click', function (e) { e.stopPropagation(); setMenu(menu.hidden); });
+            document.addEventListener('click', function (e) { if (!menu.hidden && !menu.contains(e.target)) setMenu(false); });
+            document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { setMenu(false); btn.focus(); } });
+        })();
+    </script>
     <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>

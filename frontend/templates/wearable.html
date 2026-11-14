@@ -96,30 +96,6 @@
         <span><i style="background:#ef6c00"></i>stressed</span><span><i style="background:#c62828"></i>distressed / emergency</span><span><i style="background:#1565c0"></i>exercising</span></div>
 </section>
 
-{% if demo_mode %}
-<section class="card stack w-section demo" id="demo" aria-labelledby="demo-h">
-    <h2 id="demo-h" style="margin-top:0">Demo Control Panel</h2>
-    <p class="small muted">DEMO_MODE=1. Each button posts ~16 minutes of simulated watch data through the same ingest logic as the real watch.</p>
-    <div class="scen">
-        <button type="button" class="btn" data-scenario="baseline">Baseline</button>
-        <button type="button" class="btn" data-scenario="exercise">Exercise</button>
-        <button type="button" class="btn" data-scenario="stress_spike">Stress spike</button>
-        <button type="button" class="btn" data-scenario="sustained_distress">Sustained distress</button>
-        <button type="button" class="btn" data-scenario="fall">Fall</button>
-        <button type="button" class="btn" data-scenario="cardiac_warning">Cardiac warning</button>
-        <button type="button" class="btn" data-scenario="recovery">Recovery</button>
-    </div>
-    <div class="row">
-        <button type="button" class="btn btn-ghost" id="demoReset">Reset demo data</button>
-        <button type="button" class="btn btn-ghost" id="makeReport">Generate provider report now</button>
-    </div>
-    <p class="small muted"><strong>See the other side:</strong> open a <strong>private/incognito window</strong> (Ctrl+Shift+N) and go to
-        <code>/wearable/dev-login/family</code> (family Alerts page) or <code>/wearable/dev-login/provider</code> (provider's view of this patient's documents).
-        Opening them in this window signs you out of the patient account. The demo family member and provider are already on this patient's Care Team.</p>
-    <p class="small muted">In DEMO_MODE the Call 911 button never places a real call.</p>
-    <pre class="log" id="demoLog" aria-live="polite">Ready.</pre>
-</section>
-{% endif %}
 
 <div class="w-grid">
     <section class="card stack" id="devices" aria-labelledby="dev-h">
@@ -179,7 +155,8 @@
 
 <section class="card stack w-section" id="reports" aria-labelledby="rep-h">
     <h2 id="rep-h" style="margin-top:0">Reports for my provider</h2>
-    <p class="small muted">Created automatically after a strong stress episode or emergency, or with the button in the demo panel. Saved with your health documents (Care Team page), so the providers on your care team can read them.</p>
+    <p class="small muted">Created automatically after a strong stress episode or emergency. Saved with your health documents (Care Team), so the providers on your care team can read them.</p>
+    <div><button type="button" class="btn btn-ghost" id="makeReport">Send a report to my doctor now</button></div>
     <ul id="reportList"></ul>
     <div class="report-body" id="reportBody" hidden></div>
 </section>

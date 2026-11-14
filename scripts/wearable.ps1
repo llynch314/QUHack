@@ -3,7 +3,7 @@ AttuneMind wearable helper for Windows (no `make` needed). Run from the repo roo
 
   .\scripts\wearable.ps1 setup            venv + dependencies + backend/.env ready for demo testing
   .\scripts\wearable.ps1 test             run the team's tests + the wearable tests (pytest)
-  .\scripts\wearable.ps1 run [-Port 5050] start the app with DEMO_MODE=1 and DEV_LOGIN=1, open My Watch
+  .\scripts\wearable.ps1 run [-Port 5050] start the app with DEMO_MODE=1 and DEV_LOGIN=1, open the demo console (/demo)
                                           (port 5000 is reserved by Windows on some PCs, so 5050 is the default)
   .\scripts\wearable.ps1 sim <scenario>   push a scenario straight into the DB for the demo patient
                                           (baseline, exercise, stress_spike, sustained_distress, fall, cardiac_warning, recovery)
@@ -52,8 +52,9 @@ switch ($Command) {
     'run' {
         Need-Venv
         $env:DEMO_MODE = '1'; $env:DEV_LOGIN = '1'
-        Write-Host "Starting $Url  (Ctrl+C to stop). Opening My Watch as the demo patient..." -ForegroundColor Green
-        Start-Job -ScriptBlock { param($u) Start-Sleep 4; Start-Process "$u/wearable/dev-login/patient" } -ArgumentList $Url | Out-Null
+        Write-Host "Starting $Url  (Ctrl+C to stop). Opening the demo console: $Url/demo" -ForegroundColor Green
+        Write-Host "From the console, open the patient, family and doctor apps (each keeps its own sign-in)." -ForegroundColor Green
+        Start-Job -ScriptBlock { param($u) Start-Sleep 4; Start-Process "$u/demo" } -ArgumentList $Url | Out-Null
         Push-Location $Backend; try { & $Py -m flask --app app run --debug --port $Port } finally { Pop-Location }
     }
     'sim' {

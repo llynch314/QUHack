@@ -12,6 +12,9 @@ anthropic>=1.0
 # Gemini Live (voice mode only - Claude has no real-time audio API)
 google-genai~=3.3
 
+# Text-message alerts to family (optional: without Twilio keys, texts print in the terminal)
+twilio>=9.0
+
 # Sign in with Google
 authlib~=1.9
 requests>=2.32            # used by Authlib's Flask client

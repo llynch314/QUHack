@@ -320,7 +320,8 @@ def test_delete_leaves_only_audit(patient_client, device_token):
 
 
 def test_pages_render_for_each_role(app, patient_client):
-    assert b'Demo Control Panel' in patient_client.get('/wearable').data
+    page = patient_client.get('/wearable').data
+    assert b'My Watch' in page and b'Demo Control Panel' not in page   # demo controls live on /demo
     fam = app.test_client()
     assert fam.get('/wearable/dev-login/family').headers['Location'].endswith('/family')
     assert fam.get('/wearable').headers['Location'].endswith('/family')
@@ -425,3 +426,52 @@ def test_timestamps_are_explicit_utc(patient_client):
     assert state['state']['ts'].endswith('+00:00')
     left = (datetime.fromisoformat(state['pending_alert']['send_at']) - datetime.now(timezone.utc)).total_seconds()
     assert 0 < left <= 60
+
+
+# ---------- demo console (/demo) ----------
+
+def test_demo_console_runs_the_story(app):
+    c = app.test_client()
+    page = c.get('/demo')
+    assert page.status_code == 200 and b'Demo console' in page.data and b'family.localhost' in page.data
+    r = c.post('/api/demo/scenario', json={'scenario': 'cardiac_warning'}).json
+    assert r['state']['state'] == 'emergency' and r['alert']['status'] == 'open' and r['report_created']
+    o = c.get('/api/demo/overview').json
+    assert o['family']['members'] == ['Demo Family member'] and o['family']['alerts'][0]['kind'] == 'cardiac_warning'
+    assert o['doctor']['reports'][0]['title'].endswith('(cardiac warning signs)')
+    assert c.post('/api/demo/action', json={'action': 'family_ack'}).json['acknowledged'] is True
+    assert c.get('/api/demo/overview').json['family']['alerts'][0]['acknowledged_by'] == 'Demo Family member'
+    c.post('/api/demo/reset', json={})
+    o = c.get('/api/demo/overview').json
+    assert o['family']['alerts'] == [] and o['doctor']['reports'] == [] and o['state'] is None
+
+
+def test_demo_console_fall_then_call_911_and_recovery(app):
+    c = app.test_client()
+    assert c.post('/api/demo/scenario', json={'scenario': 'fall'}).json['alert']['status'] == 'pending'
+    assert c.post('/api/demo/action', json={'action': 'call_911'}).json['family_alerted'] == 1
+    assert c.post('/api/demo/action', json={'action': 'im_ok'}).json['state']['state'] != 'emergency'
+    assert c.post('/api/demo/scenario', json={'scenario': 'recovery'}).json['state']['state'] in ('calm', 'recovering', 'elevated')
+
+
+def test_demo_console_distress_respects_patient_choice(app):
+    c = app.test_client()
+    assert c.post('/api/demo/scenario', json={'scenario': 'sustained_distress'}).json['alert'] is None
+    c.post('/api/demo/reset', json={})
+    c.post('/api/demo/settings', json={'family_tier2_alerts': True})
+    assert c.post('/api/demo/scenario', json={'scenario': 'sustained_distress'}).json['alert']['kind'] == 'distress'
+
+
+def test_demo_console_hidden_outside_demo_or_through_tunnel(app, monkeypatch):
+    c = app.test_client()
+    assert c.get('/demo', headers={'X-Forwarded-For': '8.8.8.8'}).status_code == 404
+    assert c.get('/api/demo/overview', headers={'CF-Connecting-IP': '8.8.8.8'}).status_code == 404
+    monkeypatch.setenv('DEMO_MODE', '0')
+    assert c.get('/demo').status_code == 404
+
+
+def test_emergency_right_after_distress_still_reports_to_doctor(app):
+    c = app.test_client()
+    assert c.post('/api/demo/scenario', json={'scenario': 'sustained_distress'}).json['report_created']
+    assert c.post('/api/demo/scenario', json={'scenario': 'fall'}).json['report_created']
+    assert not c.post('/api/demo/scenario', json={'scenario': 'fall'}).json['report_created']   # no duplicate

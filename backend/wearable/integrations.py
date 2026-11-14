@@ -11,6 +11,7 @@ Uses main's roles (User.role), care team (CareLink), urgent alerts (Alert) and h
 WearableAlert keeps the wearable-only part of an alert: the "I'm OK" countdown (pending / cancelled).
 When the countdown ends (or right away for cardiac warnings) a real Alert row is created.
 """
+import logging
 from datetime import datetime, timedelta, timezone
 
 from flask import g
@@ -21,6 +22,7 @@ from models import ALERT_LABELS, Alert, CareLink, CheckIn, HealthDocument, ROLE_
 from .models import WearableAlert
 from .security import as_utc, utcnow
 
+log = logging.getLogger('mindconnect.wearable')
 ROLES = ('patient', 'family', 'provider')
 REPORT_CATEGORY = 'wearable-report'
 REPORT_AUTHOR = 'AttuneMIND watch (automatic report)'
@@ -98,6 +100,22 @@ def publish_alert(walert):
     db.session.flush()
     walert.alert_id = main.id
     walert.status = 'open'
+    _text_family(main)
+
+
+def _text_family(alert):
+    """Same text message family get for SOS / chat alerts (main's care.text_family), if they set it up."""
+    try:
+        from flask import current_app, has_request_context
+
+        from care import text_family
+        if has_request_context():
+            text_family(alert)
+        else:   # simulator CLI: url_for needs a request context
+            with current_app.test_request_context():
+                text_family(alert)
+    except Exception:
+        log.warning('wearable: family text message failed (alert=%s)', alert.id)
 
 
 def main_alert(walert):
@@ -150,10 +168,9 @@ def get_report(report_id):
     return doc if doc is not None and doc.category == REPORT_CATEGORY else None
 
 
-def last_report_time(patient_id):
-    doc = (HealthDocument.query.filter_by(patient_id=patient_id, category=REPORT_CATEGORY)
-           .order_by(HealthDocument.id.desc()).first())
-    return as_utc(doc.created_at) if doc else None
+def last_report(patient_id):
+    return (HealthDocument.query.filter_by(patient_id=patient_id, category=REPORT_CATEGORY)
+            .order_by(HealthDocument.id.desc()).first())
 
 
 def delete_reports(patient_id):

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block page_label %}welcome{% endblock %}
 {% block title %}Welcome - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Welcome{% if current_user.name %}, {{ current_user.name.split(' ')[0] }}{% endif %}</h1>
@@ -13,7 +14,7 @@
             <li>AttuneMIND is a support tool. It is <strong>not</strong> a therapist, doctor or emergency service, and AI replies can be wrong.</li>
             <li>If you're in danger, call or text <strong>988</strong> (US) or call <strong>911</strong>.</li>
             <li>Your chats are sent to Anthropic's Claude AI to create replies (voice mode uses Google's Gemini AI). AttuneMIND doesn't save them.</li>
-            <li>We save your Google name and email, and the check-in ratings you choose to save. You can delete everything at any time.</li>
+            <li>We save your Google name and email, the mood colors you pick on your dashboard, and the check-in ratings you choose to save. You can delete everything at any time.</li>
         </ul>
         <label class="row"><input type="checkbox" name="agree" value="yes" required>
             I understand and agree. (<a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">Full privacy &amp; disclosures</a>)</label>

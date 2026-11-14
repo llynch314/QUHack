@@ -190,10 +190,14 @@ def evaluate(patient_id, now=None):
     patient = db.session.get(User, patient_id)
     result = escalation.handle(patient_id, reading, profile, now, patient_name=patient.name if patient else None)
     if result['report_due']:
-        last = integrations.last_report_time(patient_id)
-        gap = EMERGENCY_REPORT_DEDUPE if reading['tier'] >= 3 else REPORT_DEDUPE
-        if last is None or now - last > gap:
-            generate_report(patient_id, now, reason=_report_reason(reading))
+        reason = _report_reason(reading)
+        last = integrations.last_report(patient_id)
+        if reading['tier'] >= 3:   # each new kind of emergency always reaches the doctor
+            due = last is None or not last.title.endswith(f'({reason})') or                 now - as_utc(last.created_at) > EMERGENCY_REPORT_DEDUPE
+        else:
+            due = last is None or now - as_utc(last.created_at) > REPORT_DEDUPE
+        if due:
+            generate_report(patient_id, now, reason=reason)
     alert = result['alert'].to_dict() if result['alert'] else None
     return {**reading, 'ts': now.isoformat()}, alert
 

@@ -4,6 +4,14 @@ Branch: `feature/wearable`. It now includes `main` with the team's roles, Care T
 and the watch uses them: family get watch alerts on their normal **Alerts** page, providers get watch reports as
 **health documents**, and the patient sees both on **Care Team**.
 
+**Before you start work, always pull main first** so you test against the team's current design and flow:
+
+```powershell
+git fetch origin
+git merge origin/main            # fix any conflicts, then:
+.\scripts\wearable.ps1 test
+```
+
 > **Two copies of the project?** Make sure you run the copy you just pulled. Check with `git log --oneline -1`
 > (it should show the merge with main) and `git status`. If an older copy's server is still running on 5050,
 > stop it (Ctrl+C in its terminal) first, or use `-Port 5051`.
@@ -12,8 +20,8 @@ and the watch uses them: family get watch alerts on their normal **Alerts** page
 
 ```powershell
 .\scripts\wearable.ps1 setup     # venv, dependencies, backend/.env with keys + DEMO_MODE/DEV_LOGIN
-.\scripts\wearable.ps1 test      # 67 automated tests, ~10 s
-.\scripts\wearable.ps1 run       # http://127.0.0.1:5050, opens My Watch as the demo patient
+.\scripts\wearable.ps1 test      # 121 automated tests (team + wearable), ~10 s
+.\scripts\wearable.ps1 run       # starts the app and opens the demo console: http://127.0.0.1:5050/demo
 ```
 
 If PowerShell blocks scripts: `powershell -ExecutionPolicy Bypass -File .\scripts\wearable.ps1 <command>`.
@@ -36,7 +44,7 @@ python -m pytest wearable/tests -q
 |---|---|
 | `setup` | venv + `pip install -r requirements.txt` + `devtool env` (never overwrites values you already set) |
 | `test` | the team's tests + the wearable tests (`pytest tests wearable/tests` in `backend/`) |
-| `run [-Port 5050]` | app with `DEMO_MODE=1 DEV_LOGIN=1`, opens `/wearable/dev-login/patient` |
+| `run [-Port 5050]` | app with `DEMO_MODE=1 DEV_LOGIN=1`, opens the demo console `/demo` |
 | `sim <scenario> [-Patient N]` | writes a scenario straight to the DB for the demo patient (no browser needed) |
 | `send -Token T [-Url U] [-Hr 88]` | one reading exactly like the iPhone Shortcut (good for testing the tunnel) |
 | `tunnel` | Cloudflare quick tunnel → HTTPS URL for the phone |
@@ -46,19 +54,30 @@ python -m pytest wearable/tests -q
 Scenarios: `baseline`, `exercise`, `stress_spike`, `sustained_distress`, `fall`, `cardiac_warning`, `recovery`.
 They are seeded, so the same scenario always produces the same curves and the same result.
 
-## One-click roles (DEV_LOGIN=1)
+## The demo console (`/demo`)
 
-| URL | Signs you in as | Lands on |
+The demo controls are **not** in the app. They live on their own page, `http://127.0.0.1:5050/demo`, which only works
+with `DEMO_MODE=1` + `DEV_LOGIN=1` and only from this laptop (never through the tunnel). It has four parts:
+
+1. **Open the three apps**: buttons for the patient, family and doctor apps. Each opens on its own address
+   (`patient.localhost`, `family.localhost`, `doctor.localhost`), so the browser keeps **three separate sign-ins at once**.
+   No private windows needed. Put the tabs/windows side by side.
+2. **Play a moment in the patient's day**: Calm, Goes for a run, Stress spike, Distress, Fall, Cardiac warning, Recovery.
+   Each card says what the watch sees and what the **patient**, **family** and **doctor** should get; after you click,
+   the line underneath says what actually happened.
+3. **Act as the patient or family**: I'm OK, Call 911 (never a real call), I'm exercising, I'm not okay, chest pain,
+   family acknowledges, and the patient's two "who gets told what" switches. **Reset** clears everything.
+4. **Who sees what, right now**: live mirror of the patient's watch, the family's Alerts page and the doctor's documents.
+
+| Address | Signs you in as | Lands on |
 |---|---|---|
-| `/wearable/dev-login/patient` | Demo Patient | My Watch |
-| `/wearable/dev-login/family` | Demo Family member, on the demo patient's care team | Alerts (`/family`) |
-| `/wearable/dev-login/provider` | Demo Health provider (Demo Clinic), on the care team | the patient's health documents |
+| `patient.localhost:5050/wearable/dev-login/patient` | Demo Patient | My Watch |
+| `family.localhost:5050/wearable/dev-login/family` | Demo Family member, on the patient's care team | Alerts (`/family`) |
+| `doctor.localhost:5050/wearable/dev-login/provider` | Demo Health provider (Demo Clinic), on the care team | the patient's health documents |
 
-These are the same demo accounts as the normal **Sign in → demo** buttons, but they skip the consent screen and put
-the family member and provider on Demo Patient's Care Team automatically, so alerts and reports reach them straight away.
-
-Sign-ins share a browser, so use a **private/incognito window** (or a second browser) for family/provider while the
-patient stays signed in in the normal window.
+Same demo accounts as the normal **Sign in → demo** buttons, but consent is skipped and the family member and doctor are
+on Demo Patient's care team automatically. If a `*.localhost` link doesn't open in your browser, use the
+`127.0.0.1` link under it in a private window instead.
 
 **Tip:** run `setup` once so `FLASK_SECRET_KEY` is fixed. Without it every restart signs everyone out.
 
@@ -87,51 +106,49 @@ Tick these off in order. ✅ = what you should see.
 
 ## A. Automated (2 min)
 
-- [ ] `.\scripts\wearable.ps1 test` → ✅ `96 passed` (22 team tests + 74 wearable tests)
+- [ ] `.\scripts\wearable.ps1 test` → ✅ `121 passed` (team tests + wearable tests)
 - [ ] `.\scripts\wearable.ps1 status` → ✅ `WEARABLE_DATA_KEY set: True`, `DEMO_MODE: 1`, `DEV_LOGIN: 1`
 
-## B. Patient page basics (`run`, then the page that opens)
+## B. Patient app basics
 
+- [ ] `run` opens the **Demo console**. Click **Open patient app** → ✅ My Watch in the new attunemind design (sage header,
+      menu ☰ has **My Watch**). The page has **no** Demo Control Panel.
 - [ ] Consent card shows first. **I understand and agree** → ✅ card disappears.
-- [ ] Nav bar has **My Watch**; the rest of the site (Chat, Calm Toolkit, My Progress, Care Team) still works.
 - [ ] **Who gets told what** says "1 family member(s) on your care team will get alerts."
-- [ ] Top-right chip says **⚠️ Local http (dev only)** on 127.0.0.1.
+- [ ] Top-right chip says **⚠️ Local http (dev only)**.
+- [ ] Patient dashboard (☰ → Dashboard) menu also has **My Watch**.
 
-## C. Reader: exercise vs. stress (Demo Control Panel)
+## C. The story, from the console (patient app open next to it)
 
-- [ ] **Reset demo data** → ✅ log says reset.
-- [ ] **Exercise** → ✅ ring blue **Exercising**, HR ~140, "no stress alert", log says `no family alert`, **no nudge banner**.
-- [ ] **Stress spike** → ✅ orange **Stressed**, reasons "HR ~40% above your resting rate while sitting still", nudge banner
-      "Your body seems tense…", **Your plan right now** fills in. **Take 2 minutes** opens `/toolkit#breathing`.
-- [ ] Click **Stress spike** again → ✅ still one nudge (15-min de-dup).
-- [ ] **I'm exercising** → ✅ state switches to Exercising (holds stress alerts off 20 min).
-- [ ] **Reset**, then **Sustained distress** → ✅ red **Distressed** (Tier 2), stronger nudge, **no** family alert (toggle is off).
-- [ ] Turn on **Tell family when I'm very stressed**, **Reset**, **Sustained distress** → ✅ log shows `family alert distress open`.
-- [ ] **Recovery** → ✅ back to **Calm**.
-- [ ] Timeline chart shows the heart-rate line and coloured state bands; range selector works.
+- [ ] **Reset** → ✅ all three live panels are empty.
+- [ ] **Calm** → ✅ Calm, nothing for family or doctor.
+- [ ] **Goes for a run** → ✅ Exercising (HR ~140), **no** nudge, no family alert, no report.
+- [ ] **Stress spike** → ✅ Stressed + nudge "Your body seems tense…" and **Your plan right now** in the patient app;
+      family and doctor get nothing.
+- [ ] **Distress** → ✅ Distressed (Tier 2), stronger nudge; **no** family alert (switch is off); doctor gets a report
+      "(strong stress episode)".
+- [ ] Turn on **Tell family when I'm very stressed**, **Reset**, **Distress** → ✅ family gets **Very stressed (watch)**.
+- [ ] **Recovery** → ✅ back to Calm/Recovering, nudge gone, no new family alert.
+- [ ] Patient app: timeline chart shows the heart-rate line and coloured state bands.
 
-## D. Emergencies, 911 and family (needs a private window)
+## D. Emergencies, 911 and family (patient + family apps open)
 
-- [ ] Private window (Ctrl+Shift+N) → `http://127.0.0.1:5050/wearable/dev-login/family` → ✅ **Alerts** page,
-      "Watching over: **Demo Patient**", "No alerts. All quiet."
-- [ ] Patient window: **Fall** → ✅ full-screen red overlay, **Call 911** first, "your family will be alerted in **58–60 s**".
-- [ ] Wait 60 s → ✅ patient sees "Your family has been alerted"; family window shows **Possible fall (watch): Demo Patient**
-      "from their watch" within 5 s, generic text, no numbers. Works even if you close the patient tab.
-- [ ] Family: **I've seen this and I'm checking in** → ✅ patient overlay changes to "Your family has seen the alert."
-- [ ] **I'm OK** → ✅ overlay closes.
-- [ ] **Reset**, **Fall**, then **Call 911** → ✅ "Demo mode: no real call was placed. On a phone this button dials 911.
-      Your family has been alerted now." The family alert arrives **immediately** (no 60 s wait). In DEMO_MODE the button
-      never dials, even on a phone.
-- [ ] **Reset**, **Fall**, then tap **I'm OK** within 60 s → ✅ overlay closes, family **never** get an alert.
-- [ ] **Cardiac warning** → ✅ overlay "Warning signs detected", family alert **Warning signs (watch)** appears immediately.
-- [ ] **Something feels physically wrong → Chest pain** → ✅ same cardiac overlay.
-- [ ] Turn off **Emergency alerts to family**, **Reset**, **Cardiac warning** → ✅ no family alert.
-- [ ] Patient → **Care Team** → ✅ the watch alerts are listed with the SOS / chat alerts; remove the family member → ✅
-      My Watch says nobody receives alerts, and the emergency screen says so too.
+- [ ] **Open family app** → ✅ Alerts page, "Watching over: **Demo Patient**", "No alerts. All quiet."
+- [ ] Console **Fall** → ✅ patient app: full-screen red overlay, **Call 911** first, countdown from 60 s.
+- [ ] Wait 60 s → ✅ family app shows **Possible fall (watch): Demo Patient** "from their watch" within 5 s (generic
+      text, no numbers); doctor gets a report "(possible fall)". Works even if the patient tab is closed.
+- [ ] Family app: **I've seen this and I'm checking in** → ✅ patient overlay says "Your family has seen the alert."
+- [ ] **Reset**, **Fall**, then **Call 911** (in the patient app or console) → ✅ "Demo mode: no real call was placed";
+      family alerted **immediately**.
+- [ ] **Reset**, **Fall**, then **I'm OK** within 60 s → ✅ overlay closes, family **never** get an alert.
+- [ ] **Cardiac warning** → ✅ "Warning signs detected" overlay, family **Warning signs (watch)** immediately, doctor report
+      "(cardiac warning signs)".
+- [ ] Turn off **Emergency alerts to family**, **Reset**, **Cardiac warning** → ✅ no family alert (doctor still gets a report).
+- [ ] If the family member set up text alerts (Alerts page → phone), watch alerts are texted too (demo: in the server terminal).
 
 ## E. Provider (doctor)
 
-- [ ] Private window → `/wearable/dev-login/provider` → ✅ "Demo Patient: health documents" with
+- [ ] **Open doctor app** → ✅ "Demo Patient: health documents" with
       **Wearable report … (possible fall)** (or "cardiac warning signs" / "strong stress episode") on top. Open it → ✅
       episodes, falls, "Exercise correctly ignored", trends. Reload after each emergency: a new report appears.
 - [ ] Provider gets **no** alerts: Alerts isn't in their menu, and in devtools

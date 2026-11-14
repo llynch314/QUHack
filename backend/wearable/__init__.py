@@ -21,6 +21,7 @@ def init_wearable(app):
     from models import User
 
     from . import models  # noqa: F401  (registers the wearable_* tables before db.create_all)
+    from .demo import bp as demo_bp
     from .escalation import promote_due_alerts
     from .routes import bp
     from .security import get_fernet
@@ -30,6 +31,7 @@ def init_wearable(app):
         # Turn on when you browse through the HTTPS tunnel. Plain http://127.0.0.1 sign-in stops working.
         app.config['SESSION_COOKIE_SECURE'] = True
     app.register_blueprint(bp)
+    app.register_blueprint(demo_bp)   # /demo console: DEMO_MODE + DEV_LOGIN, local requests only
 
     last = {'t': 0.0}
 

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% block page_label %}sign in{% endblock %}
 {% block title %}Sign in - AttuneMIND{% endblock %}
 {% block content %}
+<img class="brand-logo" src="{{ url_for('static', filename='img/logo.png') }}"
+     alt="AttuneMIND: space to slow down" width="800" height="579" style="width:min(220px,60%)">
 <h1>Sign in</h1>
 <p class="muted">Choose how you use AttuneMIND. Your Google account keeps the type you pick the first time you sign in.</p>
 
