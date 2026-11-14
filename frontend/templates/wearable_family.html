@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Family alerts - Mind Connect{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/wearable.css') }}">
+<div class="w-head">
+    <h1>Family alerts</h1>
+    <span class="chip">Signed in as {{ current_user.name }} (family)</span>
+</div>
+<p class="muted">You get alerts only, never vitals. Emergencies always come through (if the patient keeps them on); stress
+    alerts only if they chose to share them. Checking every 5 seconds.</p>
+<p class="small">If someone may be in danger, <a href="tel:911"><strong>call 911</strong></a> first.</p>
+<div class="row"><label class="row small"><input type="checkbox" id="showAll"> Show acknowledged alerts too</label></div>
+<div id="alerts" class="stack" aria-live="polite" style="margin-top:12px"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    const box = document.getElementById('alerts');
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const known = new Set();
+    let first = true;
+    async function load() {
+        const all = document.getElementById('showAll').checked;
+        const res = await fetch('/api/wearable/alerts' + (all ? '' : '?unacknowledged=1'), { headers: { 'X-Wearable-Poll': '1' } });
+        const data = await res.json();
+        if (!res.ok) { box.innerHTML = `<p class="card">${esc(data.error)}</p>`; return; }
+        box.innerHTML = data.alerts.length ? data.alerts.map(a => `
+            <article class="card alert-card ${a.status}">
+                <h2 style="margin-top:0">${a.kind === 'fall' ? 'Possible fall' : a.kind === 'cardiac_warning' ? 'Warning signs' : 'Stress check-in'}
+                    <span class="tag">Tier ${a.tier}</span> <span class="tag">${esc(a.status)}</span></h2>
+                <p>${esc(a.note)}</p>
+                <p class="small muted">${esc(a.patient_name || 'Patient')} · ${new Date(a.created_at).toLocaleString()}</p>
+                ${a.status === 'open' ? `<button class="btn btn-primary" data-ack="${a.id}">I'm on it (acknowledge)</button>` : `<p class="small">Acknowledged ${new Date(a.ack_at).toLocaleTimeString()}</p>`}
+            </article>`).join('') : '<p class="card muted">No new alerts. All quiet.</p>';
+        box.querySelectorAll('[data-ack]').forEach(b => b.onclick = async () => {
+            await fetch(`/api/wearable/alerts/${b.dataset.ack}/ack`, { method: 'POST' });
+            load();
+        });
+        data.alerts.filter(a => a.status === 'open' && !known.has(a.id)).forEach(a => {
+            known.add(a.id);
+            if (!first && 'Notification' in window && Notification.permission === 'granted') new Notification('AttuneMind alert', { body: a.note });
+        });
+        first = false;
+    }
+    document.getElementById('showAll').onchange = load;
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+    load();
+    setInterval(load, 5000);
+})();
+</script>
+{% endblock %}

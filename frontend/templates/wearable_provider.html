@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Wearable reports - Mind Connect{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/wearable.css') }}">
+<div class="w-head">
+    <h1>Wearable reports</h1>
+    <span class="chip">Signed in as {{ current_user.name }} (provider)</span>
+</div>
+<p class="muted">Providers receive reports to review at the next appointment. You never receive live alerts, and you can't
+    see raw live vitals. Every report you open is recorded in the patient's audit log.</p>
+<div class="w-grid">
+    <section class="card stack"><h2 style="margin-top:0">Reports</h2><ul id="list"></ul></section>
+    <section class="card stack" style="grid-column: span 2; min-width:0"><h2 style="margin-top:0" id="title">Select a report</h2>
+        <div class="report-body" id="body" hidden></div></section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    async function load() {
+        const res = await fetch('/api/wearable/reports');
+        const data = await res.json();
+        const list = document.getElementById('list');
+        if (!res.ok) { list.innerHTML = `<li>${esc(data.error)}</li>`; return; }
+        list.innerHTML = data.reports.length ? data.reports.map(r => `<li><a href="#" data-id="${r.id}">${esc(r.patient_name)}: ${esc(r.title)}</a></li>`).join('')
+            : '<li class="muted">No reports yet.</li>';
+        list.querySelectorAll('[data-id]').forEach(a => a.onclick = async ev => {
+            ev.preventDefault();
+            const r = await (await fetch('/api/wearable/reports/' + a.dataset.id)).json();
+            document.getElementById('title').textContent = r.report.title;
+            const body = document.getElementById('body');
+            body.hidden = false;
+            body.textContent = r.report.body;
+        });
+    }
+    load();
+    setInterval(load, 30000);
+})();
+</script>
+{% endblock %}

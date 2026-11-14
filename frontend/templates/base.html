@@ -26,6 +26,7 @@
                 <li><a href="{{ url_for('chat') }}" {% if request.endpoint == 'chat' %}aria-current="page"{% endif %}>Chat</a></li>
                 <li><a href="{{ url_for('toolkit') }}" {% if request.endpoint == 'toolkit' %}aria-current="page"{% endif %}>Calm Toolkit</a></li>
                 <li><a href="{{ url_for('report') }}" {% if request.endpoint == 'report' %}aria-current="page"{% endif %}>My Progress</a></li>
+                {# --- wearable --- #}<li><a href="{{ url_for('wearable.page') }}" {% if request.endpoint == 'wearable.page' %}aria-current="page"{% endif %}>My Watch</a></li>
             </ul>
             <div class="nav-actions">
                 <details class="a11y-menu">

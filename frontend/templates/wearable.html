@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}My Watch - Mind Connect{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/wearable.css') }}">
+
+<div class="w-head">
+    <h1>My Watch</h1>
+    <div class="row">
+        <span class="chip" id="connChip">Checking connection...</span>
+        <span class="chip" id="syncChip">No device yet</span>
+    </div>
+</div>
+<p class="muted">Live body signals from your watch, what they suggest, and tools to help. Only you can see your vitals.</p>
+
+<!-- Emergency overlay: Call 911 always comes first -->
+<div class="emergency" id="emergency" role="alertdialog" aria-modal="true" aria-labelledby="emTitle" hidden>
+    <div class="box">
+        <h2 id="emTitle">Possible emergency</h2>
+        <p id="emText">If you are hurt or feel unwell, call 911 now.</p>
+        <a class="call" href="tel:911" id="emCall">Call 911</a>
+        <button type="button" class="btn ok" id="emOk">I'm OK</button>
+        <p class="count" id="emCount" aria-live="assertive"></p>
+        <p class="small">AttuneMind does not call emergency services for you and cannot diagnose a heart attack.</p>
+    </div>
+</div>
+
+<!-- Consent before first sync -->
+<section class="card stack" id="consent" hidden aria-labelledby="consent-h" style="margin-top:16px">
+    <h2 id="consent-h">Before you connect your watch</h2>
+    <ul>
+        <li>Your watch sends heart rate, heart-rate variability, resting heart rate, steps, active energy, workouts and fall events.</li>
+        <li>They are <strong>encrypted in transit</strong> (HTTPS tunnel) and <strong>encrypted at rest</strong>.</li>
+        <li><strong>You</strong> see your vitals. <strong>Family</strong> only get alerts (emergencies, and stress only if you turn it on), never your numbers. <strong>Providers</strong> only get reports, never live alerts.</li>
+        <li>AttuneMind is not a medical device and never diagnoses. In an emergency it tells you to call 911.</li>
+        <li>You can export or delete your wearable data, and revoke a device, at any time.</li>
+    </ul>
+    <p class="small muted">Consent version {{ consent_version }}</p>
+    <div><button type="button" class="btn btn-primary" id="consentBtn">I understand and agree</button></div>
+</section>
+
+<div id="nudge" class="nudge" hidden role="status">
+    <span id="nudgeText"></span>
+    <span class="row"><a class="btn btn-primary" id="nudgeLink" href="/toolkit#breathing">Open</a>
+        <button type="button" class="btn btn-ghost" id="nudgeDismiss">Dismiss</button></span>
+</div>
+
+<!-- Live state -->
+<div class="w-grid">
+    <section class="card stack" aria-labelledby="live-h">
+        <h2 id="live-h" style="margin-top:0">Live state</h2>
+        <div class="state-wrap">
+            <div class="ring" id="ring"><div><strong id="stateName">-</strong><small id="stateConf"></small></div></div>
+            <div>
+                <div class="vitals">
+                    <div class="vital"><div class="num" id="hr">-</div><div class="lbl">heart rate (bpm)</div></div>
+                    <div class="vital"><div class="num" id="hrv">-</div><div class="lbl">HRV (ms)</div></div>
+                    <div class="vital"><div class="num" id="rest">-</div><div class="lbl">resting HR</div></div>
+                </div>
+                <p id="explain" style="margin:8px 0 0"></p>
+                <ul class="why small" id="why"></ul>
+                <p class="small muted" id="updated" aria-live="polite"></p>
+            </div>
+        </div>
+        <div class="row">
+            <button type="button" class="btn" id="btnExercising">I'm exercising</button>
+            <button type="button" class="btn" id="btnNotOkay">I'm not okay</button>
+        </div>
+        <details>
+            <summary>Something feels physically wrong</summary>
+            <p class="small">If it's serious, <a href="tel:911"><strong>call 911</strong></a> first.</p>
+            <div class="row">
+                <button type="button" class="btn btn-ghost" data-symptom="chest_pain">Chest pain</button>
+                <button type="button" class="btn btn-ghost" data-symptom="cant_breathe">Can't breathe</button>
+                <button type="button" class="btn btn-ghost" data-symptom="fainting">Fainting</button>
+                <button type="button" class="btn btn-ghost" data-symptom="panic">Panic</button>
+            </div>
+        </details>
+    </section>
+
+    <section class="card stack" id="plan" aria-labelledby="plan-h">
+        <h2 id="plan-h" style="margin-top:0">Your plan right now</h2>
+        <div id="planBody"><p class="muted">When your body seems tense, a short step-by-step plan shows up here.</p></div>
+    </section>
+</div>
+
+<section class="card stack w-section" aria-labelledby="tl-h">
+    <div class="row" style="justify-content:space-between">
+        <h2 id="tl-h" style="margin:0">Timeline</h2>
+        <label class="row small">Range
+            <select id="range" style="width:auto"><option value="1h">1 hour</option><option value="6h">6 hours</option>
+                <option value="24h" selected>24 hours</option><option value="7d">7 days</option></select></label>
+    </div>
+    <svg class="chart" id="chart" viewBox="0 0 800 180" preserveAspectRatio="none" role="img" aria-label="Heart rate timeline"></svg>
+    <div class="legend"><span><i style="background:var(--primary)"></i>Heart rate</span><span><i style="background:#00897b"></i>HRV</span>
+        <span><i style="background:#ef6c00"></i>stressed</span><span><i style="background:#c62828"></i>distressed / emergency</span><span><i style="background:#1565c0"></i>exercising</span></div>
+</section>
+
+{% if demo_mode %}
+<section class="card stack w-section demo" id="demo" aria-labelledby="demo-h">
+    <h2 id="demo-h" style="margin-top:0">Demo Control Panel</h2>
+    <p class="small muted">DEMO_MODE=1. Each button posts ~16 minutes of simulated watch data through the same ingest logic as the real watch.</p>
+    <div class="scen">
+        <button type="button" class="btn" data-scenario="baseline">Baseline</button>
+        <button type="button" class="btn" data-scenario="exercise">Exercise</button>
+        <button type="button" class="btn" data-scenario="stress_spike">Stress spike</button>
+        <button type="button" class="btn" data-scenario="sustained_distress">Sustained distress</button>
+        <button type="button" class="btn" data-scenario="fall">Fall</button>
+        <button type="button" class="btn" data-scenario="cardiac_warning">Cardiac warning</button>
+        <button type="button" class="btn" data-scenario="recovery">Recovery</button>
+    </div>
+    <div class="row">
+        <button type="button" class="btn btn-ghost" id="demoReset">Reset demo data</button>
+        <button type="button" class="btn btn-ghost" id="makeReport">Generate provider report now</button>
+        <a class="btn btn-ghost" href="/wearable/dev-login/family" target="_blank" rel="noopener" title="Open in a private window to stay signed in here">Family view</a>
+        <a class="btn btn-ghost" href="/wearable/dev-login/provider" target="_blank" rel="noopener">Provider view</a>
+    </div>
+    <p class="small muted">Tip: family/provider views share this browser's sign-in. Open them in a <strong>private/incognito window</strong> (or another browser) so you stay signed in as the patient here.</p>
+    <pre class="log" id="demoLog" aria-live="polite">Ready.</pre>
+</section>
+{% endif %}
+
+<div class="w-grid">
+    <section class="card stack" id="devices" aria-labelledby="dev-h">
+        <h2 id="dev-h" style="margin-top:0">Connect a device</h2>
+        <div class="row">
+            <input type="text" id="devLabel" value="My Apple Watch" aria-label="Device name" style="flex:1;min-width:160px">
+            <button type="button" class="btn btn-primary" id="devCreate">Create device token</button>
+        </div>
+        <div id="newToken" class="stack" hidden>
+            <p><strong>Shown once.</strong> Paste this token into the <em>X-Device-Token</em> header of your "AttuneMind Sync" Shortcut (or scan the QR with your iPhone camera).</p>
+            <div class="token" id="tokenText"></div>
+            <div class="row"><button type="button" class="btn btn-ghost" id="copyToken">Copy token</button>
+                <button type="button" class="btn btn-ghost" id="copyUrl">Copy ingest URL</button></div>
+            <img class="qr" id="tokenQr" alt="QR code containing the device token">
+            <p class="small">Ingest URL: <code id="ingestUrl"></code></p>
+        </div>
+        <ul id="deviceList" class="steps stack"></ul>
+        <p class="small muted">Setup guide: <code>docs/apple-watch-shortcut.md</code></p>
+    </section>
+
+    <section class="card stack" id="settings" aria-labelledby="set-h">
+        <h2 id="set-h" style="margin-top:0">Who gets told what</h2>
+        <label class="switch"><input type="checkbox" id="emergency_alerts"><span><strong>Emergency alerts to family</strong>
+            <span class="small muted">Possible falls (after a 60 s "I'm OK" countdown) and cardiac warning signs (right away). Always in addition to calling 911.</span></span></label>
+        <label class="switch"><input type="checkbox" id="family_tier2_alerts"><span><strong>Tell family when I'm very stressed</strong>
+            <span class="small muted">Off: family hear nothing about stress. On: a generic "consider checking in" message after a sustained episode. Never your numbers.</span></span></label>
+        <label class="switch"><input type="checkbox" id="ai_explanations"><span><strong>Friendly AI explanations</strong>
+            <span class="small muted">Only works on a paid / BAA AI tier. Sends only derived numbers, never your identity.</span></span></label>
+        <p class="small muted">Providers never get live alerts. They see wearable reports at your next appointment.</p>
+        <p class="small" id="settingsStatus" role="status"></p>
+    </section>
+</div>
+
+<section class="card stack w-section" id="privacy" aria-labelledby="priv-h">
+    <h2 id="priv-h" style="margin-top:0">Your privacy</h2>
+    <div class="w-grid" style="margin-top:0">
+        <div class="stack">
+            <h3>How your data is protected</h3>
+            <ul class="small" id="privEnc"></ul>
+        </div>
+        <div class="stack">
+            <h3>AI and your data</h3>
+            <ul class="small" id="privAi"></ul>
+        </div>
+    </div>
+    <h3>Who viewed my data</h3>
+    <div style="overflow-x:auto;max-height:280px">
+        <table class="small"><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Result</th></tr></thead><tbody id="auditRows"></tbody></table>
+    </div>
+    <div class="row">
+        <a class="btn" href="/api/wearable/export" id="exportBtn">Export my data (JSON)</a>
+        <button type="button" class="btn" id="deleteBtn" style="border-color:var(--danger-border);color:var(--danger-border)">Delete my wearable data</button>
+    </div>
+</section>
+
+<section class="card stack w-section" id="reports" aria-labelledby="rep-h">
+    <h2 id="rep-h" style="margin-top:0">Reports for my provider</h2>
+    <p class="small muted">Created automatically after a strong stress episode or emergency, or with the button in the demo panel. Your linked providers can read these.</p>
+    <ul id="reportList"></ul>
+    <div class="report-body" id="reportBody" hidden></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>window.W_PATIENT_ID = {{ patient_id|tojson }}; window.W_DEMO = {{ demo_mode|tojson }};</script>
+<script src="{{ url_for('static', filename='js/wearable.js') }}"></script>
+{% endblock %}

@@ -46,6 +46,10 @@ db.init_app(app)
 init_auth(app)
 sock.init_app(app)
 app.register_blueprint(auth_bp)
+# --- wearable ---
+from wearable import init_wearable  # noqa: E402
+init_wearable(app)
+# --- end wearable ---
 
 with app.app_context():
     db.create_all()
