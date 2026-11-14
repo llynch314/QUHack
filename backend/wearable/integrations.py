@@ -100,22 +100,28 @@ def publish_alert(walert):
     db.session.flush()
     walert.alert_id = main.id
     walert.status = 'open'
-    _text_family(main)
+    notify_family_phones(main)
 
 
-def _text_family(alert):
-    """Same text message family get for SOS / chat alerts (main's care.text_family), if they set it up."""
+def _team_notifier():
+    """main's care.notify_family (push + text). Older main called it text_family."""
+    import care
+    return getattr(care, 'notify_family', None) or getattr(care, 'text_family')
+
+
+def notify_family_phones(alert):
+    """Same phone push / text message family get for SOS and chat alerts, if they set them up."""
     try:
         from flask import current_app, has_request_context
 
-        from care import text_family
+        notify = _team_notifier()
         if has_request_context():
-            text_family(alert)
+            notify(alert)
         else:   # simulator CLI: url_for needs a request context
             with current_app.test_request_context():
-                text_family(alert)
+                notify(alert)
     except Exception:
-        log.warning('wearable: family text message failed (alert=%s)', alert.id)
+        log.warning('wearable: family phone notification failed (alert=%s)', alert.id)
 
 
 def main_alert(walert):

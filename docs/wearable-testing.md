@@ -79,6 +79,19 @@ Same demo accounts as the normal **Sign in → demo** buttons, but consent is sk
 on Demo Patient's care team automatically. If a `*.localhost` link doesn't open in your browser, use the
 `127.0.0.1` link under it in a private window instead.
 
+### Demo with a real Gmail account
+
+1. Someone signs in on `http://127.0.0.1:5050` with **Sign in → Patient → Google**.
+2. They open **My Watch** (menu ☰) and click **I understand and agree**.
+3. Demo console → **1. Who is wearing the watch?** → pick their name (Gmail accounts are listed first).
+4. Click **Add the demo family member + demo doctor to their care team** (or they add `demo-family@example.com` and
+   `demo-provider@example.com` on their Care Team page).
+5. Play the scenarios: the distress, fall and cardiac alerts now go to **their** account, the demo family member's
+   Alerts page and the demo doctor's documents. The built-in Demo Patient is not touched.
+
+Google sign-in only works on `127.0.0.1:5050` if `http://127.0.0.1:5050/auth/google/callback` is an authorized
+redirect URI in the Google Cloud console (the team's setup used port 5000).
+
 **Tip:** run `setup` once so `FLASK_SECRET_KEY` is fixed. Without it every restart signs everyone out.
 
 ## Staying mergeable (PRD §0A)

@@ -129,7 +129,11 @@ def dev_login(role):
     if role == 'family':
         return redirect(url_for('care.family_home'))
     if role == 'provider':
-        return redirect(url_for('care.provider_patient', patient_id=integrations.demo_user('patient').id))
+        # ?patient=<id> (from the demo console): open that patient's documents if they added this doctor
+        target = request.args.get('patient', type=int)
+        if not (target and integrations.can_view_reports(user, target)):
+            target = integrations.demo_user('patient').id
+        return redirect(url_for('care.provider_patient', patient_id=target))
     return redirect(url_for('wearable.page'))
 
 
