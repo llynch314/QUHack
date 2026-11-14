@@ -433,7 +433,8 @@ def test_timestamps_are_explicit_utc(patient_client):
 def test_demo_console_runs_the_story(app):
     c = app.test_client()
     page = c.get('/demo')
-    assert page.status_code == 200 and b'Demo console' in page.data and b'family.localhost' in page.data
+    assert page.status_code == 200 and b'Demo console' in page.data
+    assert 'family.localhost' in c.get('/api/demo/overview').json['apps']['family']['url']
     r = c.post('/api/demo/scenario', json={'scenario': 'cardiac_warning'}).json
     assert r['state']['state'] == 'emergency' and r['alert']['status'] == 'open' and r['report_created']
     o = c.get('/api/demo/overview').json
@@ -489,3 +490,50 @@ def test_team_demo_signin_links_demo_accounts(app):
     assert fam.role == 'family'
     from models import CareLink
     assert CareLink.query.count() == 2
+
+
+def test_demo_console_drives_a_google_patient(app):
+    """Someone signs in with Gmail as a patient; the console sends the distress scenarios to THEIR account."""
+    from models import CareLink
+    google = User(google_sub='google-123', role='patient', name='Roberto Test', email='roberto@gmail.com',
+                  terms_accepted_at=datetime.now(timezone.utc))
+    db.session.add(google)
+    db.session.commit()
+    c = app.test_client()
+    listed = c.get('/api/demo/patients').json['patients']
+    assert listed[0]['id'] == google.id and not listed[0]['demo'] and not listed[0]['consent']   # real accounts first
+    # they must accept the My Watch consent themselves first
+    r = c.post('/api/demo/scenario', json={'scenario': 'sustained_distress', 'patient_id': google.id})
+    assert r.status_code == 409 and r.json['consent_required']
+    p = app.test_client()
+    with p.session_transaction() as sess:
+        sess['user_id'] = google.id
+    assert p.post('/api/wearable/consent', json={'accept': True}).status_code == 200
+    # demo family + doctor join their care team
+    assert c.post('/api/demo/link-team', json={'patient_id': google.id}).json['added'] == [
+        'Demo Family member', 'Demo Health provider']
+    c.post('/api/demo/settings', json={'patient_id': google.id, 'family_tier2_alerts': True})
+    r = c.post('/api/demo/scenario', json={'scenario': 'sustained_distress', 'patient_id': google.id}).json
+    assert r['state']['state'] == 'distressed' and r['alert']['kind'] == 'distress' and r['report_created']
+    o = c.get(f'/api/demo/overview?patient_id={google.id}').json
+    assert o['patient']['name'] == 'Roberto Test' and o['family']['alerts'][0]['patient']['name'] == 'Roberto Test'
+    assert o['apps']['patient']['url'].endswith('/wearable') and 'roberto@gmail.com' in o['apps']['patient']['hint']
+    # the Demo Patient was not touched
+    assert c.get('/api/demo/overview').json['family']['alerts'] == []
+    # the patient's own My Watch page shows it, and the doctor link opens their documents
+    assert p.get(f'/api/patients/{google.id}/state').json['state']['state'] == 'distressed'
+    doc = app.test_client()
+    assert doc.get(f'/wearable/dev-login/provider?patient={google.id}').headers['Location'].endswith(
+        f'/provider/patients/{google.id}')
+    assert CareLink.query.filter_by(patient_id=google.id).count() == 2
+
+
+def test_demo_console_rejects_non_patients(app):
+    c = app.test_client()
+    fam = integrations_demo_user('family')
+    assert c.get(f'/api/demo/overview?patient_id={fam.id}').status_code == 404
+
+
+def integrations_demo_user(role):
+    from wearable import integrations
+    return integrations.demo_user(role)

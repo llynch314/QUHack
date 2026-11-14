@@ -19,11 +19,11 @@
   .demo-bar .muted { color: var(--surface); opacity: .8; }
   .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
   h2.sec { margin: 26px 0 10px; }
-  .apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
   .apps .card { margin: 0; display: flex; flex-direction: column; gap: 6px; }
   .apps .card > * { margin: 0; }
   .apps .btn { align-self: flex-start; }
-  .stories { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+  .stories { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr)); gap: 12px; }
   .story { margin: 0; display: flex; flex-direction: column; gap: 6px; border: 2px solid transparent; }
   .story.ran { border-color: var(--ink); }
   .story h3 { margin: 0; font-size: 1.1rem; }
@@ -34,8 +34,9 @@
   .lvl { display: inline-block; border-radius: var(--pill); padding: 0 10px; font-size: .8rem; font-weight: 600; }
   .lvl0 { background: #DCE7D3; color: #2A3626; } .lvl1 { background: #F6D9A8; color: #5a3b00; }
   .lvl2 { background: #F3B9A8; color: #6b1d0f; } .lvl3 { background: #B5483A; color: #fff; }
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .live { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+  .card { min-width: 0; max-width: 100%; }
+  .live { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 12px; }
   .live .card { margin: 0; min-width: 0; }
   .live h3 { margin: 0 0 6px; }
   .big { font-size: 1.7rem; font-weight: 700; text-transform: capitalize; }
@@ -58,26 +59,48 @@
 </div>
 
 <main class="wrap" id="main">
-  <h2 class="sec">1. Open the three apps</h2>
-  <p class="muted">Each opens in its own tab with its own sign-in, so all three stay signed in at once (no private window needed).
-    Put them side by side to show the audience.</p>
-  <div class="apps">
-    {% for a in apps %}
-    <div class="card stack">
-      <strong>{{ a.label }} app</strong>
-      <span class="muted small">{% if a.key == 'patient' %}My Watch: live state, nudges, Call 911{% elif a.key == 'family' %}Alerts page: only urgent alerts, never vitals{% else %}Patient's health documents: watch reports, never live alerts{% endif %}</span>
-      <a class="btn btn-primary" href="{{ a.url }}" target="{{ a.key }}-app" rel="noopener">Open {{ a.label.lower() }} app</a>
-      <a class="muted small" href="{{ a.fallback }}" target="_blank" rel="noopener">Link not opening? Use this one in a private window</a>
+  <h2 class="sec">1. Who is wearing the watch?</h2>
+  <div class="card stack">
+    <div class="controls">
+      <label for="who"><strong>Patient:</strong></label>
+      <select id="who" style="flex:1 1 220px;min-width:0;width:100%;max-width:100%"></select>
+      <button type="button" class="btn btn-ghost" id="whoRefresh">Refresh list</button>
     </div>
-    {% endfor %}
+    <p class="small muted" style="margin:0">Someone who signs in with Gmail (Patient sign-in) shows up here. Pick them and every
+      button below sends the simulated watch data to <strong>their</strong> account.</p>
+    <p class="small" id="whoStatus" role="status" style="margin:0"></p>
+    <div class="controls" id="teamRow" hidden>
+      <button type="button" class="btn btn-primary" id="linkTeam">Add the demo family member + demo doctor to their care team</button>
+      <span class="small muted">Same as them adding demo-family@example.com and demo-provider@example.com on their Care Team page.</span>
+    </div>
   </div>
 
-  <h2 class="sec">2. Play a moment in the patient's day</h2>
+  <h2 class="sec">2. Open the three apps</h2>
+  <p class="muted">Each opens in its own tab with its own sign-in, so all three stay signed in at once. Put them side by side.</p>
+  <div class="apps">
+    <div class="card stack"><strong>Patient app</strong>
+      <span class="muted small">My Watch: live state, nudges, Call 911</span>
+      <a class="btn btn-primary" id="appPatient" target="patient-app" rel="noopener">Open patient app</a>
+      <span class="muted small" id="hintPatient"></span>
+      <a class="muted small" id="fbPatient" target="_blank" rel="noopener">Link not opening? Use this one in a private window</a></div>
+    <div class="card stack"><strong>Family app</strong>
+      <span class="muted small">Alerts page: only urgent alerts, never vitals</span>
+      <a class="btn btn-primary" id="appFamily" target="family-app" rel="noopener">Open family app</a>
+      <span class="muted small" id="hintFamily"></span>
+      <a class="muted small" id="fbFamily" target="_blank" rel="noopener">Link not opening? Use this one in a private window</a></div>
+    <div class="card stack"><strong>Doctor app</strong>
+      <span class="muted small">Patient's health documents: watch reports, never live alerts</span>
+      <a class="btn btn-primary" id="appDoctor" target="doctor-app" rel="noopener">Open doctor app</a>
+      <span class="muted small" id="hintDoctor"></span>
+      <a class="muted small" id="fbDoctor" target="_blank" rel="noopener">Link not opening? Use this one in a private window</a></div>
+  </div>
+
+  <h2 class="sec">3. Play a moment in the patient's day</h2>
   <p class="muted">Each button sends about 16 minutes of simulated watch data through the same code path as the real watch.
     The cards say what should happen; the line underneath says what actually happened.</p>
   <div class="stories" id="stories"></div>
 
-  <h2 class="sec">3. Act as the patient or family</h2>
+  <h2 class="sec">4. Act as the patient or family</h2>
   <div class="card stack">
     <div class="controls">
       <strong>Patient:</strong>
@@ -102,7 +125,7 @@
     </div>
   </div>
 
-  <h2 class="sec">4. Who sees what, right now</h2>
+  <h2 class="sec">5. Who sees what, right now</h2>
   <div class="live">
     <section class="card" aria-labelledby="pH">
       <h3 id="pH">Patient's phone &amp; watch</h3>
@@ -176,9 +199,12 @@
       <button type="button" class="btn btn-primary" data-scenario="${s.id}">Play "${esc(s.title)}"</button>
     </article>`).join('');
 
+  let PID = null;
+  try { PID = localStorage.getItem('attune-demo-patient') || null; } catch (e) { /* private mode */ }
   async function api(path, body) {
-    const res = await fetch(path, body === undefined ? {} : {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const sep = path.includes('?') ? '&' : '?';
+    const res = await fetch(body === undefined && PID ? `${path}${sep}patient_id=${PID}` : path, body === undefined ? {} : {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, patient_id: PID }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'HTTP ' + res.status);
     return data;
@@ -199,7 +225,7 @@
       $('res-' + id).textContent = text;
       log(`${id}: ${text}`);
       refresh();
-    } catch (e) { log(`${id}: ERROR ${e.message}`); }
+    } catch (e) { log(`${id}: ERROR ${e.message}`); if (/consent/.test(e.message)) alert(e.message); }
     finally { b.disabled = false; }
   });
 
@@ -234,11 +260,48 @@
     refresh();
   };
 
+  // ---- who is wearing the watch ----
+  async function loadPatients() {
+    const { patients } = await api('/api/demo/patients');
+    if (!patients.some(p => String(p.id) === String(PID))) PID = String((patients.find(p => !p.demo) || patients[0]).id);
+    $('who').innerHTML = patients.map(p => `<option value="${p.id}" ${String(p.id) === String(PID) ? 'selected' : ''}>
+      ${esc(p.name)}${p.demo ? ' (built-in demo account)' : ` (${esc(p.email || 'Google account')})`}</option>`).join('');
+    refresh();
+  }
+  $('who').onchange = () => {
+    PID = $('who').value;
+    try { localStorage.setItem('attune-demo-patient', PID); } catch (e) { /* ignore */ }
+    document.querySelectorAll('.story').forEach(c => c.classList.remove('ran'));
+    document.querySelectorAll('.result').forEach(r => { r.hidden = true; });
+    log('Now driving the watch of: ' + $('who').selectedOptions[0].textContent.trim());
+    refresh();
+  };
+  $('whoRefresh').onclick = loadPatients;
+  $('linkTeam').onclick = async () => {
+    const r = await api('/api/demo/link-team', {});
+    log(r.added.length ? 'Added to their care team: ' + r.added.join(', ') : 'Demo family + doctor were already on their care team.');
+    refresh();
+  };
+  function setApp(key, a) {
+    const cap = key[0].toUpperCase() + key.slice(1);
+    $('app' + cap).href = a.url;
+    $('hint' + cap).textContent = a.hint;
+    $('fb' + cap).hidden = !a.fallback;
+    if (a.fallback) $('fb' + cap).href = a.fallback;
+  }
+
   const openReports = new Set();
   async function refresh() {
     let d;
     try { d = await api('/api/demo/overview'); } catch (e) { return; }
     $('patientName').textContent = d.patient.name;
+    ['patient', 'family', 'doctor'].forEach(k => setApp(k, d.apps[k]));
+    const missing = !d.family.members.length || !d.doctor.members.length;
+    $('teamRow').hidden = !missing;
+    $('whoStatus').innerHTML = !d.patient.consent
+      ? '⚠️ They haven\'t accepted the My Watch consent yet: open the patient app signed in as them and click <strong>I understand and agree</strong>.'
+      : missing ? '⚠️ Their care team is missing a family member or doctor, so alerts or reports have nobody to go to.'
+      : `✅ Ready. Family: ${esc(d.family.members.join(', '))} · Doctor: ${esc(d.doctor.members.join(', '))}`;
     ['emergency_alerts', 'family_tier2_alerts'].forEach(k => { $(k).checked = !!d.settings[k]; });
 
     // patient
@@ -279,7 +342,7 @@
     });
   }
 
-  refresh();
+  loadPatients();
   setInterval(refresh, 2000);
 })();
 </script>
