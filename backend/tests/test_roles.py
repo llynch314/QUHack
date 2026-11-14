@@ -494,3 +494,12 @@ def test_new_look_on_server_pages(world):
         page = c[who].get(url).data
         assert b'css/attune.css' in page and b'site.css' not in page and b'id="menuBtn"' in page, url
     assert b'img/logo.png' in flask_app.test_client().get('/').data
+
+
+# ---------- aura mood from chat ----------
+
+def test_chat_returns_a_mood_for_the_aura(world):
+    ids, c = world
+    assert chat(c['pat'], 'I feel so lonely today').json['mood'] == 'lonely'
+    assert chat(c['pat'], 'what is grounding?').json['mood'] is None
+    assert chat(flask_app.test_client(), 'I am stressed').json['mood'] == 'stressed'   # signed out works too

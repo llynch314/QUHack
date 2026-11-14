@@ -15,6 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Lexend:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/attune.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/aura.css') }}">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 </head>
@@ -138,6 +139,11 @@
         })();
     </script>
     <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>
+    {% if not (current_user and current_user.role == 'provider') %}
+    {# Mood aura around the screen edge. Not shown on the professional provider pages. #}
+    <script>window.ATTUNE_ROLE = {{ (current_user.role if current_user else '')|tojson }};</script>
+    <script src="{{ url_for('static', filename='js/aura.js') }}"></script>
+    {% endif %}
     {% block scripts %}{% endblock %}
 </body>
 </html>

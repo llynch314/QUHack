@@ -20,6 +20,7 @@ from claude_chat import chat_reply  # noqa: E402
 from claude_emotion import NoFaceDetected, detect_emotion  # noqa: E402
 from models import (MOOD_COLORS, MOOD_MEANINGS, CheckIn, ExpressionReading, MoodEntry, _now,  # noqa: E402
                     add_missing_columns, as_utc, db, delete_user_everywhere)
+from mood import detect_mood  # noqa: E402
 from safety import detect_urgent  # noqa: E402
 import spotify  # noqa: E402
 from voice import sock  # noqa: E402
@@ -199,13 +200,16 @@ def api_chat():
         log.exception('Claude chat failed')
         return _error("The AI service isn't responding right now. Please try again in a moment.", 502)
 
+    last_user = next((str(m.get('text', '')) for m in reversed(history)
+                      if isinstance(m, dict) and m.get('role') != 'model'), '')
+    # Mood guess for the aura (not stored). None = message didn't say, keep the current color.
+    result['mood'] = 'hurting' if result.get('crisis') else detect_mood(last_user)
+
     # Signed-in patients: alert their family on signs of a crisis, panic attack or meltdown.
     # Family see only the type of alert, never the chat text.
     result['alert_sent'] = False
     user = g.get('user')
     if user is not None and user.role == 'patient':
-        last_user = next((str(m.get('text', '')) for m in reversed(history)
-                          if isinstance(m, dict) and m.get('role') != 'model'), '')
         kind = 'crisis' if result.get('crisis') else detect_urgent(last_user)
         if kind and alert_from_chat(user, kind):
             result['alert_sent'] = True

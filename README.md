@@ -7,6 +7,7 @@ AI-powered mental well-being companion (healthcare hackathon project).
 - **Talk out loud** in real time with Gemini 3.1 Flash Live. (Voice stays on Gemini because Claude has no real-time audio API; it needs its own `GEMINI_API_KEY`.)
 - **Calm Toolkit**: guided breathing, 5-4-3-2-1 grounding, a CBT thought record, DBT skill cards and soft background noise, with stress ratings before and after.
 - **My Progress**: see which skills lower your stress, and choose to print or share a report with a therapist, doctor or parent.
+- **Mood aura**: a soft glowing gradient around the edge of the screen that shows how you feel (23 moods), stays put while you scroll, and turns into a timeline of your whole session at the end (see below).
 - **Accessibility** (the **Aa** menu): text size, dyslexia-friendly and low-vision fonts, high contrast, dark mode, reduced motion and read-aloud.
 - **Three kinds of account**: patients, health providers and family members, each with their own sign-in and their own view (see below).
 - **Sign in with Google**; check-ins are stored in SQLite (or any SQL database via `DATABASE_URL`). Chats are never stored.
@@ -26,6 +27,8 @@ AI-powered mental well-being companion (healthcare hackathon project).
 | `backend/care.py` | Care team, health documents and alerts (pages + API) |
 | `backend/sms.py` | Text-message alerts to family members (Twilio) |
 | `backend/safety.py` | Spots panic attack / meltdown / crisis language for family alerts |
+| `backend/mood.py` | Guesses a mood from a chat message, to color the aura |
+| `frontend/static/js/aura.js`, `css/aura.css` | The mood aura, mood picker and session summary |
 | `backend/tests/` | Tests for who can see what (`pytest`) |
 | `backend/models.py` | Database tables |
 | `frontend/templates/`, `frontend/static/` | Pages, CSS and JavaScript |
@@ -89,6 +92,17 @@ Emotion detection sends the image to Claude, so it uses the same `ANTHROPIC_API_
 Family members can turn on text alerts from their Alerts page: they enter a mobile number, confirm it with a 6-digit code, and then get a text for every new alert (SOS button or signs of crisis, panic attack or meltdown in chat). Texts only say who needs support and the kind of alert, never chat text or notes.
 
 To send real texts, create a [Twilio](https://console.twilio.com) account, buy or use a trial phone number, and set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM_NUMBER` in `backend/.env`. On a trial account you can only text numbers you've verified in the Twilio console. Without these settings the app runs in demo mode: codes and alert texts are printed in the `make run` terminal instead of being sent.
+
+## Mood aura
+
+A soft gradient glow around the edge of every page (just below the top bar, then the full edge once the bar scrolls away). Its colors show how you feel, fade smoothly when your mood changes, and breathe slowly. Strong feelings glow wider but never faster, so the aura calms rather than alarms. When you're panicking it breathes at a 4-in, 6-out pace you can follow.
+
+- **23 moods** in five groups that match the dashboard colors: Calm (peaceful, calm, content, grateful), Bright (happy, excited, hopeful, loved), In between (neutral, thoughtful, confused), Low (tired, sad, lonely, numb) and Intense (anxious, stressed, frustrated, overwhelmed, angry, scared, panicking, hurting).
+- **Where the mood comes from**: the round mood button in the bottom-right corner, the dashboard color dots, what you write in chat (`/api/chat` returns `mood` from `backend/mood.py`), stress check-ins (0-10), and the optional camera expression check. The camera never overrides a mood you picked in the last 15 minutes, and a "neutral" face never replaces a real feeling. Moods picked with the button are also saved to Mood history (as the matching dashboard color).
+- **End of session**: "See my session aura" in the mood panel, or signing out, turns the glow into a timeline of everything you felt, clockwise from the top-left corner, with a summary (how long, which moods, how you started and ended).
+- **Privacy**: the session lives only in that browser tab (sessionStorage) and is cleared on sign-out. Chat text is never stored; only the mood word is sent back.
+- **Accessibility**: "Hide the glow" in the mood panel, a still glow with reduce motion, full keyboard support, screen-reader labels, and it never blocks clicks. Not shown on provider pages.
+- Other scripts can use `Aura.setMood('calm', 'chat')`, `Aura.fromStress(7)`, `Aura.fromCamera('happy')` and `Aura.endSession()`.
 
 ## Privacy and safety notes
 
