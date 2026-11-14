@@ -1,39 +1,44 @@
 {% extends "base.html" %}
-{% block title %}Privacy & disclosures - Mind Connect{% endblock %}
+{% block title %}Privacy & disclosures - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Privacy &amp; disclosures</h1>
 <div class="stack">
     <section class="card">
-        <h2>Mind Connect is not therapy or emergency care</h2>
-        <p>Mind Connect is a self-help and support tool. It isn't a licensed therapist, doctor or crisis service, can't diagnose
+        <h2>AttuneMIND is not therapy or emergency care</h2>
+        <p>AttuneMIND is a self-help and support tool. It isn't a licensed therapist, doctor or crisis service, can't diagnose
             or treat any condition, and can't send help in an emergency. AI replies can be wrong. If you are in danger, call or
             text <a href="tel:988">988</a> (US) or call <a href="tel:911">911</a>.</p>
     </section>
     <section class="card">
         <h2>What we store</h2>
         <ul>
-            <li><strong>If you sign in with Google:</strong> your name, email and Google account ID, and the check-in ratings you
-                choose to save.</li>
-            <li><strong>Chats, voice and camera:</strong> not stored by Mind Connect. Your conversation is kept only in your
+            <li><strong>If you sign in with Google:</strong> your name, email and Google account ID, your account type, the check-in ratings you
+                choose to save, your care team, health documents and alerts.</li>
+            <li><strong>Chats, voice and camera:</strong> not stored by AttuneMIND. Your conversation is kept only in your
                 browser tab and disappears when you close it.</li>
             <li><strong>Accessibility settings:</strong> saved only in your browser.</li>
-            <li>You can delete your account and all check-ins at any time from <a href="{{ url_for('report') }}">My Progress</a>.</li>
+            <li>You can delete your account and all of this data at any time from <a href="{{ url_for('auth.account') }}">My account</a> (click your account type at the top of any page).</li>
         </ul>
     </section>
     <section class="card">
         <h2>AI provider</h2>
-        <p>To create replies, your messages, voice audio and (only if you turn it on) camera snapshots are sent to Google's
-            Gemini API. Depending on the plan the app uses, Google may keep and use this content to improve its products, so please
+        <p>To create replies, your typed messages and (only if you turn it on) camera snapshots are sent to Anthropic's
+            Claude API. In voice mode, your voice audio and camera snapshots are sent to Google's Gemini API instead.
+            Depending on the plan the app uses, the provider may keep and use this content to improve its products, so please
             don't include names, addresses, dates of birth or medical record numbers.</p>
     </section>
     <section class="card">
         <h2>Sharing with your care team</h2>
-        <p>Mind Connect never shares anything automatically. You can choose to print or save a report of your check-ins and
-            give it to a therapist, doctor or parent. Once shared, the recipient controls their copy.</p>
+        <p>You can add health providers and family members to your <a href="{{ url_for('care.care_team_page') }}">Care Team</a>,
+            and remove them at any time. Health providers see only the health documents in your account (including progress reports
+            you choose to add). Family members see only urgent alerts: when you press an alert button, or, if you leave automatic
+            alerts on, when your chat shows signs of a panic attack, meltdown or crisis. Family members never see what you wrote.
+            You can also print or save a report of your check-ins and give it to anyone you choose. Once shared, the recipient
+            controls their copy.</p>
     </section>
     <section class="card">
         <h2>HIPAA</h2>
-        <p>Mind Connect is a hackathon prototype and is <strong>not</strong> HIPAA-compliant. A production version used by
+        <p>AttuneMIND is a hackathon prototype and is <strong>not</strong> HIPAA-compliant. A production version used by
             healthcare providers would need business associate agreements with every vendor that handles health data
             (including the AI provider), encryption, access controls and audit logging.</p>
     </section>

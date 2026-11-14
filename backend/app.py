@@ -1,4 +1,4 @@
-"""Mind Connect web app. Run with `make run` (or `python app.py` from backend/)."""
+"""AttuneMIND web app. Run with `make run` (or `python app.py` from backend/)."""
 import base64
 import csv
 import logging
@@ -7,16 +7,23 @@ import secrets
 from datetime import timedelta
 
 from dotenv import load_dotenv
+<<<<<<< HEAD
 from flask import (
     Flask, g, jsonify, render_template, request, send_from_directory, session,
 )
+=======
+from flask import Flask, g, jsonify, render_template, request, session
+import anthropic
+>>>>>>> df38e44cf0e8ead19d8d57129474b64c9d301cfa
 
 load_dotenv()
 
-from auth import bp as auth_bp, init_auth, login_required  # noqa: E402
-from gemini_backend import chat_reply  # noqa: E402
-from gemini_emotion import NoFaceDetected, detect_emotion  # noqa: E402
-from models import CheckIn, ExpressionReading, add_missing_columns, as_utc, db  # noqa: E402
+from auth import bp as auth_bp, init_auth, login_required, roles_required  # noqa: E402
+from care import alert_from_chat, bp as care_bp  # noqa: E402
+from claude_chat import chat_reply  # noqa: E402
+from claude_emotion import NoFaceDetected, detect_emotion  # noqa: E402
+from models import CheckIn, ExpressionReading, add_missing_columns, as_utc, db, delete_user_everywhere  # noqa: E402
+from safety import detect_urgent  # noqa: E402
 from voice import sock  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -24,7 +31,7 @@ FRONTEND_DIR = os.path.join(BASE_DIR, '..', 'frontend')
 ACTIVITIES = {'breathing', 'grounding', 'thought-record', 'chat', 'voice', 'general'}
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger('mindconnect')
+log = logging.getLogger('attunemind')
 
 app = Flask(
     __name__,
@@ -32,13 +39,13 @@ app = Flask(
     static_folder=os.path.join(FRONTEND_DIR, 'static'),
 )
 
-secret = os.getenv('FLASK_SECRET_KEY')
+secret = os.getenv('FLASK_SECRET_KEY') or os.getenv('SECRET_KEY')
 if not secret:
     secret = secrets.token_hex(32)
     log.warning('FLASK_SECRET_KEY is not set; using a random key, so sign-ins reset on every restart.')
 app.config.update(
     SECRET_KEY=secret,
-    SQLALCHEMY_DATABASE_URI=os.getenv('DATABASE_URL', 'sqlite:///mindconnect.db'),  # file in backend/instance/
+    SQLALCHEMY_DATABASE_URI=os.getenv('DATABASE_URL', 'sqlite:///attunemind.db'),  # file in backend/instance/
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
@@ -49,6 +56,7 @@ db.init_app(app)
 init_auth(app)
 sock.init_app(app)
 app.register_blueprint(auth_bp)
+app.register_blueprint(care_bp)
 app.add_template_filter(lambda dt: as_utc(dt).isoformat(), 'iso')   # for <time datetime=...>
 
 with app.app_context():
@@ -78,7 +86,7 @@ def toolkit():
 
 
 @app.route('/report')
-@login_required
+@roles_required('patient')
 def report():
     checkins = g.user.checkins
     rated = [c for c in checkins if c.stress_before is not None and c.stress_after is not None]
@@ -114,10 +122,19 @@ def _error(message, status):
     return jsonify(error=message), status
 
 
+<<<<<<< HEAD
 @app.get('/api/me')
 @login_required
 def api_me():
     return jsonify(name=g.user.name or 'there')
+=======
+QUOTA_MESSAGE = 'The AI usage limit has been reached for now. Please try again later.'
+
+
+def _is_quota_error(exc):
+    """True when Claude rejected the call because of rate limits or quota (HTTP 429)."""
+    return isinstance(exc, anthropic.RateLimitError)
+>>>>>>> df38e44cf0e8ead19d8d57129474b64c9d301cfa
 
 
 @app.post('/api/chat')
@@ -128,12 +145,27 @@ def api_chat():
         return _error('No messages sent.', 400)
     emotion = data.get('emotion') if isinstance(data.get('emotion'), str) else None
     try:
-        return jsonify(chat_reply(history, emotion))
+        result = chat_reply(history, emotion)
     except RuntimeError as e:          # missing API key
         return _error(str(e), 503)
-    except Exception:
-        log.exception('Gemini chat failed')
+    except Exception as e:
+        if _is_quota_error(e):
+            log.warning('Claude chat skipped: API quota exhausted (429)')
+            return _error(QUOTA_MESSAGE, 429)
+        log.exception('Claude chat failed')
         return _error("The AI service isn't responding right now. Please try again in a moment.", 502)
+
+    # Signed-in patients: alert their family on signs of a crisis, panic attack or meltdown.
+    # Family see only the type of alert, never the chat text.
+    result['alert_sent'] = False
+    user = g.get('user')
+    if user is not None and user.role == 'patient':
+        last_user = next((str(m.get('text', '')) for m in reversed(history)
+                          if isinstance(m, dict) and m.get('role') != 'model'), '')
+        kind = 'crisis' if result.get('crisis') else detect_urgent(last_user)
+        if kind and alert_from_chat(user, kind):
+            result['alert_sent'] = True
+    return jsonify(result)
 
 
 @app.post('/api/emotion')
@@ -153,8 +185,11 @@ def api_emotion():
         return jsonify(emotion=None, saved=False)
     except RuntimeError as e:
         return _error(str(e), 503)
-    except Exception:
-        log.exception('Gemini emotion detection failed')
+    except Exception as e:
+        if _is_quota_error(e):
+            log.warning('Claude emotion detection skipped: API quota exhausted (429)')
+            return _error(QUOTA_MESSAGE, 429)
+        log.exception('Claude emotion detection failed')
         return _error('Emotion detection failed.', 502)
     return jsonify(emotion=emotion, saved=_record_expression(emotion, source))
 
@@ -212,7 +247,7 @@ def _rating(value):
 
 
 @app.route('/api/checkins', methods=['GET', 'POST'])
-@login_required
+@roles_required('patient')
 def api_checkins():
     if request.method == 'GET':
         return jsonify(checkins=[c.to_dict() for c in g.user.checkins])
@@ -235,12 +270,11 @@ def api_checkins():
 
 
 @app.post('/api/me/delete')
-@login_required
+@roles_required('patient', 'provider', 'family')
 def api_delete_me():
-    """Delete the account and every check-in. Required for user control over their data."""
+    """Delete the account and everything tied to it. Required for user control over their data."""
     user_id = g.user.id
-    db.session.delete(g.user)
-    db.session.commit()
+    delete_user_everywhere(g.user)
     _purge_expression_log(user_id)
     session.clear()
     return jsonify(deleted=True)

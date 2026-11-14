@@ -1,4 +1,4 @@
-// Text chat with Gemini, browser dictation, and the optional webcam expression check.
+// Text chat with Claude, browser dictation, and the optional webcam expression check.
 (function () {
     const log = document.getElementById('chatLog');
     const form = document.getElementById('chatForm');
@@ -40,7 +40,7 @@
         history.push({ role: 'user', text });
         addBubble('user', text);
         sendBtn.disabled = true;
-        status.textContent = 'Mind Connect is thinking...';
+        status.textContent = 'AttuneMIND is thinking...';
         try {
             const res = await fetch('/api/chat', {
                 method: 'POST',
@@ -52,6 +52,7 @@
             history.push({ role: 'model', text: data.reply });
             addBubble('model', data.reply);
             if (data.crisis) showCrisis();
+            if (data.alert_sent) addBubble('system', 'The family members on your care team were sent an alert so they can check in with you. They can\'t see what you wrote.');
             if (MC.readAloudOn()) MC.speak(data.reply);
             status.textContent = '';
         } catch (err) {
@@ -96,7 +97,8 @@
         });
     }
 
-    // ---- Optional webcam expression check (opt-in, every 5 s) ----
+    // ---- Optional webcam expression check (opt-in, once a minute) ----
+    const SNAPSHOT_INTERVAL_MS = 60000;
     const camToggle = document.getElementById('camToggle');
     const video = document.getElementById('webcam');
     const camStatus = document.getElementById('camStatus');
@@ -124,6 +126,13 @@
                 body: JSON.stringify({ image_data: frame, source: window.MC.voiceActive ? 'voice' : 'chat' }),
             });
             const data = await res.json();
+            if (res.status === 429) {
+                // Out of API quota: stop checking so we don't keep wasting requests.
+                clearInterval(timer);
+                timer = null;
+                camStatus.textContent = 'Expression check paused: ' + data.error;
+                return;
+            }
             if (!res.ok) throw new Error(data.error);
             emotion = data.emotion;
             camStatus.textContent = emotion
@@ -141,7 +150,10 @@
                 video.srcObject = stream;
                 video.hidden = false;
                 camStatus.textContent = 'Camera on.';
-                timer = setInterval(snapshot, 5000);
+                // Each snapshot is one Gemini request, so check once a minute
+                // (plus one shortly after turning on) to stay within the quota.
+                setTimeout(snapshot, 1500);
+                timer = setInterval(snapshot, SNAPSHOT_INTERVAL_MS);
             } catch (err) {
                 camToggle.checked = false;
                 camStatus.textContent = 'Camera unavailable: ' + err.message;

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}My Progress - Mind Connect{% endblock %}
+{% block title %}My Progress - AttuneMIND{% endblock %}
 {% block content %}
 <h1>My progress</h1>
 <p class="muted no-print">Only you can see this. Nothing is sent to anyone unless you choose to share it.</p>
 
-<p><strong>Mind Connect check-in report</strong> for {{ current_user.name or 'user' }}, generated <span id="reportDate"></span></p>
+<p><strong>AttuneMIND check-in report</strong> for {{ current_user.name or 'user' }}, generated <span id="reportDate"></span></p>
 
 {% if not checkins %}
     <div class="card stack">
@@ -54,7 +54,7 @@
         <ul>
             <li>It includes your name, every check-in rating, any saved expression readings and their dates. It does <strong>not</strong> include your chats.</li>
             <li>Once you share it, the person you give it to controls their copy. Health providers keep records under their own privacy rules (such as HIPAA in the US).</li>
-            <li>Sharing is always your choice. Mind Connect never sends reports automatically.</li>
+            <li>Sharing is always your choice. AttuneMIND never sends reports automatically.</li>
         </ul>
         <label class="row"><input type="checkbox" id="shareConsent"> I understand what's in this report and I choose to share it.</label>
         <div><button type="button" class="btn btn-primary" id="printBtn" disabled>Print or save as PDF</button></div>
@@ -106,9 +106,8 @@
 
 <section class="card stack no-print" aria-labelledby="data-h" style="margin-top:16px">
     <h2 id="data-h">Your data</h2>
-    <p>Signed in as {{ current_user.email or current_user.name }}. You can permanently delete your account, check-ins and expression readings at any time.</p>
-    <div><button type="button" class="btn" id="deleteBtn">Delete my account and data</button></div>
-    <p id="deleteStatus" role="status"></p>
+    <p>Signed in as {{ current_user.email or current_user.name }}. You can permanently delete your account, check-ins and expression readings at any time
+        from <a href="{{ url_for('auth.account') }}">My account</a>.</p>
 </section>
 {% endblock %}
 {% block scripts %}
@@ -131,13 +130,6 @@
         if (!confirm('Delete all saved expression readings? This cannot be undone.')) return;
         const res = await fetch('/api/expressions/delete', { method: 'POST' });
         if (res.ok) location.reload();
-    });
-
-    document.getElementById('deleteBtn').addEventListener('click', async () => {
-        if (!confirm('Permanently delete your account and all check-ins? This cannot be undone.')) return;
-        const res = await fetch('/api/me/delete', { method: 'POST' });
-        if (res.ok) location.href = '/';
-        else document.getElementById('deleteStatus').textContent = 'Could not delete your data. Please try again.';
     });
 </script>
 {% endblock %}
