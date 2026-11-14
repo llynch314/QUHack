@@ -8,6 +8,7 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 from flask import Flask, g, jsonify, render_template, request, session
+from google.genai import errors as genai_errors
 
 load_dotenv()
 
@@ -106,6 +107,14 @@ def _error(message, status):
     return jsonify(error=message), status
 
 
+QUOTA_MESSAGE = 'The AI usage limit has been reached for now. Please try again later.'
+
+
+def _is_quota_error(exc):
+    """True when Gemini rejected the call because the API key ran out of quota (HTTP 429)."""
+    return isinstance(exc, genai_errors.APIError) and exc.code == 429
+
+
 @app.post('/api/chat')
 def api_chat():
     data = request.get_json(silent=True) or {}
@@ -117,7 +126,10 @@ def api_chat():
         return jsonify(chat_reply(history, emotion))
     except RuntimeError as e:          # missing API key
         return _error(str(e), 503)
-    except Exception:
+    except Exception as e:
+        if _is_quota_error(e):
+            log.warning('Gemini chat skipped: API quota exhausted (429)')
+            return _error(QUOTA_MESSAGE, 429)
         log.exception('Gemini chat failed')
         return _error("The AI service isn't responding right now. Please try again in a moment.", 502)
 
@@ -139,7 +151,10 @@ def api_emotion():
         return jsonify(emotion=None, saved=False)
     except RuntimeError as e:
         return _error(str(e), 503)
-    except Exception:
+    except Exception as e:
+        if _is_quota_error(e):
+            log.warning('Gemini emotion detection skipped: API quota exhausted (429)')
+            return _error(QUOTA_MESSAGE, 429)
         log.exception('Gemini emotion detection failed')
         return _error('Emotion detection failed.', 502)
     return jsonify(emotion=emotion, saved=_record_expression(emotion, source))
