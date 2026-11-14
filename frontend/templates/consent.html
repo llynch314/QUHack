@@ -1,18 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Welcome - AttuneMind{% endblock %}
+{% block title %}Welcome - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Welcome{% if current_user.name %}, {{ current_user.name.split(' ')[0] }}{% endif %}</h1>
-<p>Before you start, here's what AttuneMind is and what it keeps. Please read and choose.</p>
+<p>Before you start, here's what AttuneMIND is and what it keeps. Please read and choose.</p>
 
 <form method="post" class="stack" style="max-width:720px">
     {% if error %}<p class="crisis-panel" role="alert">{{ error }}</p>{% endif %}
 
     <section class="card stack" aria-labelledby="terms-h">
-        <h2 id="terms-h">1. What AttuneMind is (required)</h2>
+        <h2 id="terms-h">1. What AttuneMIND is (required)</h2>
         <ul>
-            <li>AttuneMind is a support tool. It is <strong>not</strong> a therapist, doctor or emergency service, and AI replies can be wrong.</li>
+            <li>AttuneMIND is a support tool. It is <strong>not</strong> a therapist, doctor or emergency service, and AI replies can be wrong.</li>
             <li>If you're in danger, call or text <strong>988</strong> (US) or call <strong>911</strong>.</li>
-            <li>Your chats are sent to Google's Gemini AI to create replies. AttuneMind doesn't save them.</li>
+            <li>Your chats are sent to Google's Gemini AI to create replies. AttuneMIND doesn't save them.</li>
             <li>We save your Google name and email, and the check-in ratings you choose to save. You can delete everything at any time.</li>
         </ul>
         <label class="row"><input type="checkbox" name="agree" value="yes" required>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Alerts - AttuneMind{% endblock %}
+{% block title %}Alerts - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Alerts</h1>
 <p class="muted">You'll see an alert here if someone who added you ({{ current_user.email }}) to their care team has a panic attack, meltdown or crisis, or asks you to check in. You can't see their chats or health records.</p>
@@ -7,7 +7,7 @@
 {% if links %}
     <p>Watching over: {% for l in links %}<strong>{{ l.patient.display_name }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}</p>
 {% else %}
-    <div class="card"><p>No one has added you yet. Ask them to add <strong>{{ current_user.email }}</strong> on their AttuneMind Care Team page.</p></div>
+    <div class="card"><p>No one has added you yet. Ask them to add <strong>{{ current_user.email }}</strong> on their AttuneMIND Care Team page.</p></div>
 {% endif %}
 
 <div id="alerts" class="stack" aria-live="polite"></div>
@@ -73,7 +73,7 @@
         const { alerts } = await res.json();
         const newest = alerts.length ? alerts[0].id : 0;
         if (known !== null && newest > known) {
-            document.title = '(!) New alert - AttuneMind';
+            document.title = '(!) New alert - AttuneMIND';
             if (MC.readAloudOn && MC.readAloudOn()) MC.speak(`New alert: ${alerts[0].label} for ${alerts[0].patient.name}`);
         }
         known = newest;

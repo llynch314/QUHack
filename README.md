@@ -1,4 +1,4 @@
-# AttuneMind
+# AttuneMIND
 AI-powered mental well-being companion (healthcare hackathon project).
 
 ## Features

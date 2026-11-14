@@ -95,7 +95,7 @@ def api_add_member():
     email = (_json().get('email') or '').strip().lower()
     member = User.query.filter(db.func.lower(User.email) == email).first() if email else None
     if member is None:
-        abort(404, 'No AttuneMind account uses that email. Ask them to sign in once first, '
+        abort(404, 'No AttuneMIND account uses that email. Ask them to sign in once first, '
                    'using the provider or family sign-in.')
     if member.role not in ('provider', 'family'):
         abort(400, 'You can only add health providers and family members.')

@@ -40,7 +40,7 @@
         history.push({ role: 'user', text });
         addBubble('user', text);
         sendBtn.disabled = true;
-        status.textContent = 'AttuneMind is thinking...';
+        status.textContent = 'AttuneMIND is thinking...';
         try {
             const res = await fetch('/api/chat', {
                 method: 'POST',

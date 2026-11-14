@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Sign in - AttuneMind{% endblock %}
+{% block title %}Sign in - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Sign in</h1>
-<p class="muted">Choose how you use AttuneMind. Your Google account keeps the type you pick the first time you sign in.</p>
+<p class="muted">Choose how you use AttuneMIND. Your Google account keeps the type you pick the first time you sign in.</p>
 
 <div class="grid">
     <article class="card feature stack">
         <div class="icon" aria-hidden="true">🌱</div>
-        <h2>I'm using AttuneMind</h2>
+        <h2>I'm using AttuneMIND</h2>
         <p>Chat, use the Calm Toolkit, track your progress, and choose who on your care team can see what.</p>
         <div><a class="btn btn-primary" href="{{ url_for('auth.login', role='patient', next=next) }}">Sign in</a></div>
     </article>

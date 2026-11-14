@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}My Patients - AttuneMind{% endblock %}
+{% block title %}My Patients - AttuneMIND{% endblock %}
 {% block content %}
 <h1>My patients</h1>
 <p class="muted">Patients appear here after they add you ({{ current_user.email }}) to their care team. You can see and add their health documents only.</p>
@@ -15,7 +15,7 @@
     {% endfor %}
     </div>
 {% else %}
-    <div class="card"><p>No patients yet. Ask your patient to add <strong>{{ current_user.email }}</strong> on their AttuneMind Care Team page.</p></div>
+    <div class="card"><p>No patients yet. Ask your patient to add <strong>{{ current_user.email }}</strong> on their AttuneMIND Care Team page.</p></div>
 {% endif %}
 {% endblock %}
 {% block scripts %}

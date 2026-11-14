@@ -1,4 +1,4 @@
-"""AttuneMind web app. Run with `make run` (or `python app.py` from backend/)."""
+"""AttuneMIND web app. Run with `make run` (or `python app.py` from backend/)."""
 import base64
 import csv
 import logging
