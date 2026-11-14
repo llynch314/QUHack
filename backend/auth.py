@@ -215,6 +215,10 @@ def google_callback():
 def dev_login():
     if not dev_login_enabled():
         abort(404)
+    # ?role= lets the sign-in page's demo buttons skip Google even when it is configured.
+    if request.args.get('role') in ROLES:
+        session['login_role'] = request.args['role']
+        session['next'] = _safe_next(request.args.get('next'))
     next_url = session.get('next')
     role = session.get('login_role', 'patient')
     # One demo account per role, so all three views can be shown without Google.

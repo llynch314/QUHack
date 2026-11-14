@@ -26,7 +26,19 @@
 </div>
 
 <p class="notice" style="margin-top:24px">Providers and family members only see someone's information after that person adds them to their care team, and lose access as soon as they're removed.</p>
-{% if not google_configured and dev_login_enabled %}
+{% if dev_login_enabled %}
+    {% if google_configured %}
+    <article class="card stack" style="margin-top:24px">
+        <h2>Try a demo account</h2>
+        <p class="muted">No Google account needed. Each button signs in to a shared demo account.</p>
+        <div class="row" style="display:flex;flex-wrap:wrap;gap:8px">
+            <a class="btn btn-ghost" href="{{ url_for('auth.dev_login', role='patient', next=next) }}">Demo patient</a>
+            <a class="btn btn-ghost" href="{{ url_for('auth.dev_login', role='provider') }}">Demo doctor</a>
+            <a class="btn btn-ghost" href="{{ url_for('auth.dev_login', role='family') }}">Demo family member</a>
+        </div>
+    </article>
+    {% else %}
     <p class="muted">Demo mode: each button signs in to a demo account for that type.</p>
+    {% endif %}
 {% endif %}
 {% endblock %}
