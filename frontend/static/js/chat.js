@@ -52,6 +52,7 @@
             history.push({ role: 'model', text: data.reply });
             addBubble('model', data.reply);
             if (data.crisis) showCrisis();
+            if (data.mood && window.Aura) Aura.setMood(data.mood, 'chat');
             if (data.alert_sent) addBubble('system', 'The family members on your care team were sent an alert so they can check in with you. They can\'t see what you wrote.');
             if (MC.readAloudOn()) MC.speak(data.reply);
             status.textContent = '';
@@ -135,6 +136,7 @@
             }
             if (!res.ok) throw new Error(data.error);
             emotion = data.emotion;
+            if (emotion && window.Aura) Aura.fromCamera(emotion);
             camStatus.textContent = emotion
                 ? 'Your expression looks: ' + emotion + (data.saved ? ' (saved to My Progress)' : '')
                 : 'No face found.';

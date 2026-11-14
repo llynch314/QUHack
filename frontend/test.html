@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="static/css/attune.css">
+<link rel="stylesheet" href="static/css/aura.css">
 <script>
   // Saved accessibility settings (text size, colors...) from the other pages
   try { var s = JSON.parse(localStorage.getItem('mc-a11y') || '{}');
@@ -109,7 +110,7 @@ blockquote{
       </section>
 
       <section class="right" aria-label="Your mood color">
-        <div class="mood-capsule" id="capsule" style="--mood:#8FB08A">
+        <div class="mood-capsule" id="capsule" data-aura-oval style="--mood:#8FB08A">
           <div class="fill" id="moodName">Green</div>
           <p class="meaning" id="moodMeaning" aria-live="polite">Green means you feel calm and steady. Everything feels okay.</p>
         </div>
@@ -280,5 +281,7 @@ blockquote{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" defer></script>
 <script src="static/js/music.js" defer></script>
 <script src="test.js" defer></script>
+<script>window.ATTUNE_ROLE = "patient";</script>
+<script src="static/js/aura.js" defer></script>
 </body>
 </html>

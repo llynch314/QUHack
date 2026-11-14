@@ -578,3 +578,12 @@ def test_only_family_can_turn_on_push(world, pushes):
     ids, c = world
     for who in ('pat', 'doc'):
         assert c[who].post('/api/me/push').status_code == 403
+
+
+# ---------- aura mood from chat ----------
+
+def test_chat_returns_a_mood_for_the_aura(world):
+    ids, c = world
+    assert chat(c['pat'], 'I feel so lonely today').json['mood'] == 'lonely'
+    assert chat(c['pat'], 'what is grounding?').json['mood'] is None
+    assert chat(flask_app.test_client(), 'I am stressed').json['mood'] == 'stressed'   # signed out works too
