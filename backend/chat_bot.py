@@ -1,36 +1,27 @@
-import google.generativeai as gemini
-from dotenv import load_dotenv
-import os
+"""Terminal version of the Mind Connect chatbot. Run with `make chat`."""
+from gemini_backend import chat_reply
 
-# Load environment variables
-load_dotenv()
 
-# Configure Gemini API
-gemini.configure(api_key=os.getenv('GEMINI_API_KEY'))
-
-# Initialize the chatbot
 def chatbot():
-    print("Welcome to the Mental Health Chatbot! Type 'exit' to end the conversation.")
-    
-    # Initialize the Gemini model
-    model = gemini.GenerativeModel('gemini-2.0-flash')
-    
+    print("Welcome to Mind Connect. Type 'exit' to end the conversation.")
+    history = []
     while True:
-        # Get user input
-        user_input = input("You: ")
-        
-        # Exit the chatbot
+        user_input = input("You: ").strip()
         if user_input.lower() == 'exit':
-            print("Chatbot: Goodbye! Take care.")
+            print("Mind Connect: Goodbye! Take care.")
             break
-        
-        # Generate a response using Gemini
+        if not user_input:
+            continue
+        history.append({'role': 'user', 'text': user_input})
         try:
-            response = model.generate_content(user_input)
-            print(f"Chatbot: {response.text}")
+            result = chat_reply(history)
         except Exception as e:
-            print(f"Chatbot: Sorry, I encountered an error. Please try again. Error: {e}")
+            history.pop()
+            print(f"Mind Connect: Sorry, I couldn't reply just now. ({e})")
+            continue
+        history.append({'role': 'model', 'text': result['reply']})
+        print(f"Mind Connect: {result['reply']}")
 
-# Run the chatbot
+
 if __name__ == '__main__':
     chatbot()

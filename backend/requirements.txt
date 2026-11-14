@@ -1,15 +1,21 @@
 # Core dependencies for the Flask app (app.py), the Gemini chatbot and emotion detection.
-# Install with:  pip install -r requirements.txt
+# Install with:  pip install -r requirements.txt   (or: make setup)
 
 # Web server
 flask~=3.1
 python-dotenv~=1.0
+flask-sock~=0.7           # websocket for voice mode (Gemini Live relay)
 
-# Gemini chatbot
-google-generativeai~=0.8
+# Gemini (text chat, webcam expression check, Live voice)
+google-genai~=3.3
 
-# Emotion detection (DeepFace runs on TensorFlow; tf-keras pulls in a matching tensorflow)
-deepface>=0.0.93
-tf-keras>=2.16
+# Sign in with Google
+authlib~=1.9
+requests>=2.32            # used by Authlib's Flask client
+
+# Database (SQLite by default; set DATABASE_URL for Postgres etc.)
+flask-sqlalchemy~=3.1
+
+# Webcam demo (emotional_recognition.py): capture, face boxes, JPEG encoding
 opencv-python>=4.9
 numpy>=1.26

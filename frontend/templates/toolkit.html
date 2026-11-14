@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Calm Toolkit - Mind Connect{% endblock %}
+{% macro rating(id, label) -%}
+<div class="rating">
+    <label for="{{ id }}">{{ label }} <output id="{{ id }}-out" for="{{ id }}">5</output>/10</label>
+    <input type="range" id="{{ id }}" min="0" max="10" step="1" value="5"
+           aria-describedby="{{ id }}-scale">
+    <div class="scale" id="{{ id }}-scale"><span>0 calm</span><span>10 most stressed</span></div>
+</div>
+{%- endmacro %}
+{% macro checkin_after(activity) -%}
+<div class="after stack" hidden>
+    {{ rating(activity ~ '-after', 'How stressed do you feel now?') }}
+    <div class="row">
+        <button type="button" class="btn btn-primary save-checkin">{% if current_user %}Save to my progress{% else %}See my change{% endif %}</button>
+    </div>
+    <p class="result" role="status"></p>
+    {% if not current_user %}<p class="muted"><a href="{{ url_for('auth.login', next='/toolkit') }}">Sign in</a> to keep track of what helps you over time.</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% block content %}
+<h1>Calm Toolkit</h1>
+<p>Skills you can use any time, even without the app. Rate how you feel before and after to find out what works best for <em>you</em>.</p>
+<nav aria-label="Toolkit sections" class="row" style="margin-bottom:16px">
+    <a class="btn btn-ghost" href="#breathing">Breathing</a>
+    <a class="btn btn-ghost" href="#grounding">5-4-3-2-1 grounding</a>
+    <a class="btn btn-ghost" href="#thought-record">Thought record</a>
+    <a class="btn btn-ghost" href="#skills">Quick skills</a>
+    <a class="btn btn-ghost" href="#sounds">Calming sound</a>
+</nav>
+
+<div class="stack">
+    <!-- Breathing -->
+    <section id="breathing" class="card tool stack" data-activity="breathing" aria-labelledby="breathing-h">
+        <h2 id="breathing-h">Guided breathing</h2>
+        <p class="muted">Slow breathing, especially a longer out-breath, tells your nervous system it's safe to settle.</p>
+        <div class="before stack">
+            {{ rating('breathing-before', 'How stressed do you feel right now?') }}
+        </div>
+        <div class="row">
+            <label for="breathPattern">Pattern</label>
+            <select id="breathPattern" style="width:auto">
+                <option value="4,0,6,0">Calm: in 4, out 6</option>
+                <option value="4,4,4,4">Box: in 4, hold 4, out 4, hold 4</option>
+                <option value="4,7,8,0">4-7-8: in 4, hold 7, out 8</option>
+            </select>
+            <label for="breathRounds">Rounds</label>
+            <select id="breathRounds" style="width:auto">
+                <option>3</option><option selected>5</option><option>8</option>
+            </select>
+            <label class="row"><input type="checkbox" id="breathVoice"> Spoken cues</label>
+        </div>
+        <div class="breath-stage">
+            <div class="breath-circle" id="breathCircle" aria-hidden="true"></div>
+        </div>
+        <p class="breath-cue" id="breathCue" aria-live="assertive">Press start when you're ready.</p>
+        <div class="row" style="justify-content:center">
+            <button type="button" class="btn btn-primary" id="breathStart">Start</button>
+            <button type="button" class="btn" id="breathStop" disabled>Stop</button>
+        </div>
+        {{ checkin_after('breathing') }}
+    </section>
+
+    <!-- Grounding -->
+    <section id="grounding" class="card tool stack" data-activity="grounding" aria-labelledby="grounding-h">
+        <h2 id="grounding-h">5-4-3-2-1 grounding</h2>
+        <p class="muted">Bring yourself back to the present by noticing what's around you. Typing is optional - you can just notice. Nothing here is saved.</p>
+        <div class="before stack">
+            {{ rating('grounding-before', 'How stressed do you feel right now?') }}
+            <button type="button" class="btn btn-primary" id="groundStart">Begin</button>
+        </div>
+        <div id="groundSteps" hidden class="stack">
+            <div class="progress" aria-hidden="true"><span id="groundProgress" style="width:0"></span></div>
+            <h3 id="groundPrompt" tabindex="-1"></h3>
+            <div id="groundInputs" class="stack"></div>
+            <div class="row">
+                <button type="button" class="btn" id="groundBack">Back</button>
+                <button type="button" class="btn btn-primary" id="groundNext">Next</button>
+            </div>
+        </div>
+        {{ checkin_after('grounding') }}
+    </section>
+
+    <!-- Thought record (CBT) -->
+    <section id="thought-record" class="card tool stack" data-activity="thought-record" aria-labelledby="tr-h">
+        <h2 id="tr-h">Thought record (CBT)</h2>
+        <p class="muted">When a thought is weighing on you, slow it down and look at the evidence. This stays on your device only.</p>
+        <div class="before stack">
+            {{ rating('thought-record-before', 'How strong is the feeling right now?') }}
+        </div>
+        <form id="thoughtForm" class="stack">
+            <div><label for="tr-situation">1. What happened? (just the facts)</label><textarea id="tr-situation" rows="2"></textarea></div>
+            <div><label for="tr-thought">2. What went through your mind?</label><textarea id="tr-thought" rows="2"></textarea></div>
+            <div>
+                <label for="tr-trap">3. Is it a thinking trap?</label>
+                <select id="tr-trap">
+                    <option value="">Not sure</option>
+                    <option>Catastrophizing (expecting the worst)</option>
+                    <option>All-or-nothing thinking</option>
+                    <option>Mind reading (assuming what others think)</option>
+                    <option>Fortune telling (predicting the future)</option>
+                    <option>Should statements</option>
+                    <option>Labeling ("I'm a failure")</option>
+                    <option>Discounting the positive</option>
+                </select>
+            </div>
+            <div><label for="tr-for">4. Evidence that supports the thought</label><textarea id="tr-for" rows="2"></textarea></div>
+            <div><label for="tr-against">5. Evidence that doesn't fit the thought</label><textarea id="tr-against" rows="2"></textarea></div>
+            <div><label for="tr-balanced">6. A more balanced way to see it (what would you tell a friend?)</label><textarea id="tr-balanced" rows="2"></textarea></div>
+            <div class="row">
+                <button type="button" class="btn btn-primary" id="trDone">I'm done</button>
+                <button type="reset" class="btn btn-ghost">Clear</button>
+            </div>
+        </form>
+        {{ checkin_after('thought-record') }}
+    </section>
+
+    <!-- DBT / quick skills -->
+    <section id="skills" class="tool" aria-labelledby="skills-h">
+        <h2 id="skills-h">Quick skills</h2>
+        <div class="skill-cards">
+            <article class="card"><h3>STOP (DBT)</h3><p><strong>S</strong>top. <strong>T</strong>ake a step back and breathe. <strong>O</strong>bserve what you feel and what's happening. <strong>P</strong>roceed mindfully, choosing what helps.</p></article>
+            <article class="card"><h3>TIPP for intense feelings (DBT)</h3><p><strong>T</strong>emperature: cold water on your face. <strong>I</strong>ntense exercise for a minute. <strong>P</strong>aced breathing. <strong>P</strong>aired muscle relaxation: tense, then release.</p></article>
+            <article class="card"><h3>Opposite action (DBT)</h3><p>Notice what the emotion urges you to do (hide, snap, avoid), and if it won't help, gently do the opposite: reach out, soften, take one small step.</p></article>
+            <article class="card"><h3>Check the facts (CBT)</h3><p>Ask: what's the evidence? What else could explain this? What's most likely? If it did happen, how would I cope?</p></article>
+            <article class="card"><h3>Self-soothe with your senses</h3><p>Something soft to touch, a warm drink, a favorite song, a pleasant smell, looking at something calming.</p></article>
+            <article class="card"><h3>One small step</h3><p>Feeling stuck? Pick the smallest possible next action - drink water, open a window, send one text - and just do that.</p></article>
+        </div>
+    </section>
+
+    <!-- Calming sound -->
+    <section id="sounds" class="card tool stack" aria-labelledby="sounds-h">
+        <h2 id="sounds-h">Calming sound</h2>
+        <p class="muted">Soft background noise can mask distractions and help you settle. Generated on your device.</p>
+        <div class="row">
+            <button type="button" class="btn btn-primary" id="noiseToggle" aria-pressed="false">Play soft noise</button>
+            <label for="noiseVolume">Volume</label>
+            <input type="range" id="noiseVolume" min="0" max="1" step="0.05" value="0.4" style="width:160px">
+        </div>
+    </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>window.MC_SIGNED_IN = {{ 'true' if current_user else 'false' }};</script>
+<script src="{{ url_for('static', filename='js/toolkit.js') }}"></script>
+{% endblock %}

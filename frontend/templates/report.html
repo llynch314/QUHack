@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}My Progress - Mind Connect{% endblock %}
+{% block content %}
+<h1>My progress</h1>
+<p class="muted no-print">Only you can see this. Nothing is sent to anyone unless you choose to share it.</p>
+
+<p><strong>Mind Connect check-in report</strong> for {{ current_user.name or 'user' }}, generated <span id="reportDate"></span></p>
+
+{% if not checkins %}
+    <div class="card stack">
+        <p>No check-ins yet. Try an exercise in the <a href="{{ url_for('toolkit') }}">Calm Toolkit</a> and rate your stress before and after - your progress will show up here.</p>
+    </div>
+{% else %}
+    <div class="grid">
+        <div class="card"><div class="stat">{{ checkins|length }}</div><div>check-ins</div></div>
+        <div class="card">
+            <div class="stat">{% if avg_change is not none %}{{ '%+.1f'|format(avg_change) }}{% else %}-{% endif %}</div>
+            <div>average stress change per exercise (negative = calmer)</div>
+        </div>
+        <div class="card">
+            <div><strong>What helps most</strong></div>
+            {% if by_activity %}
+                <ul>
+                {% for activity, avg, n in by_activity %}
+                    <li>{{ activity|replace('-', ' ')|capitalize }}: {{ '%+.1f'|format(avg) }} on average ({{ n }}x)</li>
+                {% endfor %}
+                </ul>
+            {% else %}<p class="muted">Rate before and after an exercise to see this.</p>{% endif %}
+        </div>
+    </div>
+
+    <h2>History</h2>
+    <div class="card" style="overflow-x:auto">
+        <table>
+            <caption class="sr-only">Check-in history</caption>
+            <thead><tr><th scope="col">Date</th><th scope="col">Activity</th><th scope="col">Before</th><th scope="col">After</th><th scope="col">Change</th></tr></thead>
+            <tbody>
+            {% for c in checkins|reverse %}
+                <tr>
+                    <td><time datetime="{{ c.created_at.isoformat() }}" class="local-time">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</time></td>
+                    <td>{{ c.activity|replace('-', ' ')|capitalize }}</td>
+                    <td>{{ c.stress_before if c.stress_before is not none else '-' }}</td>
+                    <td>{{ c.stress_after if c.stress_after is not none else '-' }}</td>
+                    <td>{% if c.stress_before is not none and c.stress_after is not none %}{{ '%+d'|format(c.stress_after - c.stress_before) }}{% else %}-{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <section class="card stack no-print" aria-labelledby="share-h" style="margin-top:16px">
+        <h2 id="share-h">Share with a therapist, doctor or parent</h2>
+        <p>You can print this page or save it as a PDF and give it to someone on your care team. Before you do:</p>
+        <ul>
+            <li>It includes your name, every check-in rating and the dates above. It does <strong>not</strong> include your chats.</li>
+            <li>Once you share it, the person you give it to controls their copy. Health providers keep records under their own privacy rules (such as HIPAA in the US).</li>
+            <li>Sharing is always your choice. Mind Connect never sends reports automatically.</li>
+        </ul>
+        <label class="row"><input type="checkbox" id="shareConsent"> I understand what's in this report and I choose to share it.</label>
+        <div><button type="button" class="btn btn-primary" id="printBtn" disabled>Print or save as PDF</button></div>
+    </section>
+{% endif %}
+
+<section class="card stack no-print" aria-labelledby="data-h" style="margin-top:16px">
+    <h2 id="data-h">Your data</h2>
+    <p>Signed in as {{ current_user.email or current_user.name }}. You can permanently delete your account and all check-ins at any time.</p>
+    <div><button type="button" class="btn" id="deleteBtn">Delete my account and data</button></div>
+    <p id="deleteStatus" role="status"></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+    // Show times in the viewer's local time zone.
+    document.querySelectorAll('time.local-time').forEach(t => {
+        t.textContent = new Date(t.getAttribute('datetime')).toLocaleString();
+    });
+    document.getElementById('reportDate').textContent = new Date().toLocaleDateString();
+
+    const consent = document.getElementById('shareConsent');
+    const printBtn = document.getElementById('printBtn');
+    if (consent) {
+        consent.addEventListener('change', () => { printBtn.disabled = !consent.checked; });
+        printBtn.addEventListener('click', () => window.print());
+    }
+
+    document.getElementById('deleteBtn').addEventListener('click', async () => {
+        if (!confirm('Permanently delete your account and all check-ins? This cannot be undone.')) return;
+        const res = await fetch('/api/me/delete', { method: 'POST' });
+        if (res.ok) location.href = '/';
+        else document.getElementById('deleteStatus').textContent = 'Could not delete your data. Please try again.';
+    });
+</script>
+{% endblock %}
