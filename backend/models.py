@@ -63,6 +63,8 @@ class User(db.Model):
     # Family only: text alerts to this number. Set only after it is confirmed with a code.
     phone = db.Column(db.String(20))            # E.164, e.g. +15551234567
     sms_alerts = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
+    # Family only: ntfy topic for phone push notifications (see push.py). None = off.
+    ntfy_topic = db.Column(db.String(64))
     created_at = db.Column(db.DateTime(timezone=True), default=_now)
     # Consent, collected on the consent screen when the account is created.
     terms_accepted_at = db.Column(db.DateTime(timezone=True))   # None = hasn't agreed yet
@@ -280,6 +282,7 @@ def add_missing_columns():
         'license_number': 'VARCHAR(60)',
         'phone': 'VARCHAR(20)',
         'sms_alerts': 'BOOLEAN NOT NULL DEFAULT TRUE',
+        'ntfy_topic': 'VARCHAR(64)',
     }
     with db.engine.begin() as conn:
         for name, ddl in new_columns.items():

@@ -25,13 +25,18 @@ AI-powered mental well-being companion (healthcare hackathon project).
 | `backend/voice.py` | Websocket relay between the browser and Gemini Live |
 | `backend/auth.py` | Sign in with Google, the three sign-in doors, and the access rules (`ACCESS`) |
 | `backend/care.py` | Care team, health documents and alerts (pages + API) |
+| `backend/push.py` | Phone push notifications to family members (ntfy) |
 | `backend/sms.py` | Text-message alerts to family members (Twilio) |
+| `backend/spotify.py` | Calm Spotify playlists for each mood color |
 | `backend/safety.py` | Spots panic attack / meltdown / crisis language for family alerts |
 | `backend/mood.py` | Guesses a mood from a chat message, to color the aura |
 | `frontend/static/js/aura.js`, `css/aura.css` | The mood aura, mood picker and session summary |
 | `backend/tests/` | Tests for who can see what (`pytest`) |
 | `backend/models.py` | Database tables |
-| `frontend/templates/`, `frontend/static/` | Pages, CSS and JavaScript |
+| `frontend/test.html`, `frontend/test.js` | The patient app: one page with tabs (`#dashboard`, `#mood-history`, `#chatbot`, `#toolkit`, `#care-team`, `#settings`). Served at `/test` (`/dashboard` redirects there). Opened straight from disk it shows sample data, for design work. |
+| `frontend/static/css/attune.css` | The design system (colors, header, cards, buttons) shared by every page |
+| `frontend/static/js/music.js` | Spotify music card (React, loaded from a CDN, no build step) |
+| `frontend/templates/` | Server pages for sign-in, consent, providers, family, privacy, and the guest chat and toolkit |
 
 ## Quick start (with make)
 
@@ -86,6 +91,14 @@ Emotion detection sends the image to Claude, so it uses the same `ANTHROPIC_API_
 2. Add the authorized redirect URI `http://127.0.0.1:5000/auth/google/callback`.
 3. Put the client ID and secret in `backend/.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and set `FLASK_SECRET_KEY` to a long random string.
 4. Open the app at `http://127.0.0.1:5000` (not `localhost`), so the redirect URI matches.
+
+## Music for your mood (Spotify)
+
+Below the mood picker, a React card suggests calm Spotify playlists for the picked color and plays them in Spotify's embedded player. Create an app at the [Spotify developer dashboard](https://developer.spotify.com/dashboard) and set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in `backend/.env`. Without them the card shows a link to a Spotify search instead. No Spotify login is needed for patients.
+
+## Phone notifications
+
+Family members can get alerts as phone notifications with no setup on the server: on their Alerts page they press **Set up phone notifications**, install the free [ntfy](https://ntfy.sh) app, and subscribe to the private topic name shown. Every new alert then pops up on their phone. Notifications only say who needs support and the kind of alert. Set `NTFY_SERVER` in `backend/.env` to use your own ntfy server instead of ntfy.sh.
 
 ## Text-message alerts
 

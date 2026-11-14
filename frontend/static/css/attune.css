@@ -232,6 +232,13 @@ th, td { text-align: left; padding: .6rem .4rem; border-bottom: 1.5px solid var(
 .skill-cards .card { margin-top: 0; }
 .result { font-weight: 600; }
 
+/* Music card (React + Spotify, static/js/music.js) */
+.music-mood { display: inline-flex; align-items: center; gap: .4rem; }
+.music-mood::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--c); border: 1.5px solid var(--ink); }
+.music-tile img, .music-art { width: 56px; height: 56px; border-radius: 12px; object-fit: cover; flex: none; }
+.music-art { display: grid; place-items: center; background: var(--bg); border: 1.5px solid var(--line); font-size: 1.4rem; }
+.music-tile .btn { min-width: 6.5rem; }
+
 @media print {
   .bar, .site-footer, .no-print { display: none !important; }
   body { background: #fff; color: #000; }

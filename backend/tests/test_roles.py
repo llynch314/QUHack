@@ -496,6 +496,90 @@ def test_new_look_on_server_pages(world):
     assert b'img/logo.png' in flask_app.test_client().get('/').data
 
 
+# ---------- Spotify music card (/api/music) ----------
+
+def test_music_without_spotify_keys(world, monkeypatch):
+    ids, c = world
+    monkeypatch.delenv('SPOTIFY_CLIENT_ID', raising=False)
+    r = c['pat'].get('/api/music?mood=Blue').json
+    assert r['configured'] is False and r['playlists'] == [] and 'open.spotify.com/search/' in r['search_url']
+    assert c['pat'].get('/api/music?mood=Orange').status_code == 400
+    assert flask_app.test_client().get('/api/music').status_code == 401
+
+
+def test_music_with_spotify(world, monkeypatch):
+    import spotify
+    ids, c = world
+    monkeypatch.setenv('SPOTIFY_CLIENT_ID', 'id')
+    monkeypatch.setenv('SPOTIFY_CLIENT_SECRET', 'secret')
+    monkeypatch.setattr(spotify, '_cache', {})
+    seen = []
+    def fake_search(query, limit=6):
+        seen.append(query)
+        return [{'id': 'abc', 'name': 'Calm', 'owner': 'Spotify', 'image': None,
+                 'url': 'https://open.spotify.com/playlist/abc', 'embed_url': 'https://open.spotify.com/embed/playlist/abc'}]
+    monkeypatch.setattr(spotify, '_search', fake_search)
+    r = c['pat'].get('/api/music?mood=Red').json
+    assert r['playlists'][0]['embed_url'].endswith('/embed/playlist/abc')
+    c['pat'].get('/api/music?mood=Red')
+    assert seen == ['calming meditation breathing']          # second call served from cache
+    def broken(query, limit=6): raise OSError('network down')
+    monkeypatch.setattr(spotify, '_search', broken)
+    r = c['pat'].get('/api/music?mood=Blue').json
+    assert r['playlists'] == [] and 'error' in r
+
+
+# ---------- Phone push notifications (ntfy) ----------
+
+@pytest.fixture
+def pushes(monkeypatch):
+    import push
+    sent = []
+    monkeypatch.setattr(push, 'send_push', lambda topic, title, message, click=None, urgent=False:
+                        sent.append(dict(topic=topic, title=title, message=message)))
+    monkeypatch.setattr(push, 'dispatch', lambda notifications: sent.extend(notifications))
+    return sent
+
+
+def test_family_gets_push_notifications(world, pushes):
+    ids, c = world
+    state = c['mom'].post('/api/me/push').get_json()
+    assert state['on'] and state['topic'].startswith('attune-')
+    assert c['mom'].post('/api/me/push').get_json()['topic'] == state['topic']   # stays the same
+    assert c['mom'].post('/api/me/push/test').status_code == 200
+    pushes.clear()
+
+    c['pat'].post('/api/alerts/sos', json={'kind': 'crisis', 'note': 'private note'})
+    assert len(pushes) == 1
+    assert pushes[0]['topic'] == state['topic']
+    assert 'Crisis' in pushes[0]['title'] and 'Pat' in pushes[0]['title']
+    assert 'private note' not in pushes[0]['message']
+
+
+def test_push_topic_can_be_replaced_and_turned_off(world, pushes):
+    ids, c = world
+    first = c['mom'].post('/api/me/push').get_json()['topic']
+    assert c['mom'].post('/api/me/push', json={'new': True}).get_json()['topic'] != first
+    assert c['mom'].delete('/api/me/push').get_json()['on'] is False
+    pushes.clear()
+    c['pat'].post('/api/alerts/sos', json={'kind': 'crisis'})
+    assert pushes == []
+
+
+def test_unlinked_family_gets_no_push(world, pushes):
+    ids, c = world
+    c['stranger'].post('/api/me/push')
+    pushes.clear()
+    c['pat'].post('/api/alerts/sos', json={'kind': 'crisis'})
+    assert pushes == []
+
+
+def test_only_family_can_turn_on_push(world, pushes):
+    ids, c = world
+    for who in ('pat', 'doc'):
+        assert c[who].post('/api/me/push').status_code == 403
+
+
 # ---------- aura mood from chat ----------
 
 def test_chat_returns_a_mood_for_the_aura(world):
