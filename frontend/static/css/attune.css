@@ -51,7 +51,7 @@
 }
 
 /* Easier navigation (Aa menu) */
-:root[data-links="underline"] a { text-decoration: underline !important; text-decoration-thickness: 2px; }
+:root[data-links="underline"] a:not(.brand) { text-decoration: underline !important; text-decoration-thickness: 2px; }
 :root[data-targets="big"] .btn, :root[data-targets="big"] button:not(.dot):not(.menu-btn),
 :root[data-targets="big"] input[type="text"], :root[data-targets="big"] textarea, :root[data-targets="big"] select { min-height: 56px; }
 :root[data-targets="big"] .btn, :root[data-targets="big"] button:not(.dot):not(.menu-btn) { padding: .8rem 1.5rem; }
