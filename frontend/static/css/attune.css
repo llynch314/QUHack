@@ -184,6 +184,9 @@ main > h1, .page-title { font-size: clamp(2.2rem, 6vw, 3.4rem); margin: 0 0 .4re
 .card + .card, section.card { margin-top: 1rem; }
 .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .grid > .card { margin-top: 0; }
+.grid.grid-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1000px) { .grid.grid-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .grid.grid-4 { grid-template-columns: 1fr; } }
 .stack > * + * { margin-top: .85rem; }
 .row { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
 .muted { color: var(--ink-soft); }
