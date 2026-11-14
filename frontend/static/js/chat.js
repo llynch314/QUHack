@@ -40,7 +40,7 @@
         history.push({ role: 'user', text });
         addBubble('user', text);
         sendBtn.disabled = true;
-        status.textContent = 'Mind Connect is thinking...';
+        status.textContent = 'AttuneMind is thinking...';
         try {
             const res = await fetch('/api/chat', {
                 method: 'POST',
@@ -52,6 +52,7 @@
             history.push({ role: 'model', text: data.reply });
             addBubble('model', data.reply);
             if (data.crisis) showCrisis();
+            if (data.alert_sent) addBubble('system', 'The family members on your care team were sent an alert so they can check in with you. They can\'t see what you wrote.');
             if (MC.readAloudOn()) MC.speak(data.reply);
             status.textContent = '';
         } catch (err) {

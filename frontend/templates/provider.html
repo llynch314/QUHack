@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}My Patients - AttuneMind{% endblock %}
+{% block content %}
+<h1>My patients</h1>
+<p class="muted">Patients appear here after they add you ({{ current_user.email }}) to their care team. You can see and add their health documents only.</p>
+
+{% if links %}
+    <div class="grid">
+    {% for l in links %}
+        <article class="card stack">
+            <h2>{{ l.patient.display_name }}</h2>
+            <p class="muted">Added you <time class="local-time" datetime="{{ l.created_at|iso }}">{{ l.created_at.strftime('%Y-%m-%d') }}</time></p>
+            <div><a class="btn btn-primary" href="{{ url_for('care.provider_patient', patient_id=l.patient.id) }}">Health documents</a></div>
+        </article>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="card"><p>No patients yet. Ask your patient to add <strong>{{ current_user.email }}</strong> on their AttuneMind Care Team page.</p></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+    document.querySelectorAll('time.local-time').forEach(t => {
+        t.textContent = new Date(t.getAttribute('datetime')).toLocaleDateString();
+    });
+</script>
+{% endblock %}

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}My Progress - Mind Connect{% endblock %}
+{% block title %}My Progress - AttuneMind{% endblock %}
 {% block content %}
 <h1>My progress</h1>
 <p class="muted no-print">Only you can see this. Nothing is sent to anyone unless you choose to share it.</p>
 
-<p><strong>Mind Connect check-in report</strong> for {{ current_user.name or 'user' }}, generated <span id="reportDate"></span></p>
+<p><strong>AttuneMind check-in report</strong> for {{ current_user.name or 'user' }}, generated <span id="reportDate"></span></p>
 
 {% if not checkins %}
     <div class="card stack">
@@ -54,7 +54,7 @@
         <ul>
             <li>It includes your name, every check-in rating, any saved expression readings and their dates. It does <strong>not</strong> include your chats.</li>
             <li>Once you share it, the person you give it to controls their copy. Health providers keep records under their own privacy rules (such as HIPAA in the US).</li>
-            <li>Sharing is always your choice. Mind Connect never sends reports automatically.</li>
+            <li>Sharing is always your choice. AttuneMind never sends reports automatically.</li>
         </ul>
         <label class="row"><input type="checkbox" id="shareConsent"> I understand what's in this report and I choose to share it.</label>
         <div><button type="button" class="btn btn-primary" id="printBtn" disabled>Print or save as PDF</button></div>

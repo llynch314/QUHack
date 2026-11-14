@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ patient.display_name }} - AttuneMind{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('care.provider_home') }}">← My patients</a></p>
+<h1>{{ patient.display_name }}: health documents</h1>
+<p class="muted">Shared with you by the patient. They can remove your access at any time.</p>
+
+<div class="stack">
+{% for d in docs %}
+    <details class="card" {% if loop.first %}open{% endif %}>
+        <summary><strong>{{ d.title }}</strong> <span class="muted">· {{ d.author_name or 'Former member' }} · <time class="local-time" datetime="{{ d.created_at|iso }}">{{ d.created_at.strftime('%Y-%m-%d') }}</time></span></summary>
+        <pre style="white-space:pre-wrap;font:inherit">{{ d.body }}</pre>
+        {% if d.author_id == current_user.id %}
+            <button type="button" class="btn btn-ghost delete-doc" data-id="{{ d.id }}">Delete</button>
+        {% endif %}
+    </details>
+{% else %}
+    <div class="card"><p>No documents yet.</p></div>
+{% endfor %}
+</div>
+
+<section class="card stack" aria-labelledby="note-h" style="margin-top:16px">
+    <h2 id="note-h">Add a note or document</h2>
+    <form id="docForm" class="stack">
+        <label for="docTitle">Title</label>
+        <input type="text" id="docTitle" required maxlength="200" placeholder="e.g. Session notes, care plan">
+        <label for="docBody">Details</label>
+        <textarea id="docBody" rows="6"></textarea>
+        <div><button type="submit" class="btn btn-primary">Add document</button></div>
+        <p id="docStatus" role="status"></p>
+    </form>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+    document.querySelectorAll('time.local-time').forEach(t => {
+        t.textContent = new Date(t.getAttribute('datetime')).toLocaleString();
+    });
+
+    document.getElementById('docForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const res = await fetch('/api/patients/{{ patient.id }}/documents', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: document.getElementById('docTitle').value,
+                body: document.getElementById('docBody').value,
+                category: 'provider-note',
+            }),
+        });
+        if (res.ok) location.reload();
+        else document.getElementById('docStatus').textContent = (await res.json()).error;
+    });
+
+    document.querySelectorAll('.delete-doc').forEach(btn => btn.addEventListener('click', async () => {
+        if (!confirm('Delete this document?')) return;
+        const res = await fetch(`/api/documents/${btn.dataset.id}`, { method: 'DELETE' });
+        if (res.ok) location.reload();
+    }));
+</script>
+{% endblock %}
