@@ -33,6 +33,7 @@ make setup    # create the venv, install dependencies, create backend/.env
 make run      # Flask web app at http://127.0.0.1:5000
 make chat     # terminal chatbot
 make webcam   # webcam emotion demo (press q to quit)
+make watch    # live view of saved expression readings from the database (run in a second terminal)
 ```
 
 For the website you don't need Google sign-in to start: set `DEV_LOGIN=1` in `backend/.env` to get a demo account.
@@ -79,5 +80,6 @@ Emotion detection sends the image to Gemini, so it uses the same `GEMINI_API_KEY
 
 - This is a prototype and is **not HIPAA-compliant**. A production version would need a business associate agreement (BAA) with every vendor that touches health data, including the AI provider, plus encryption, access controls and audit logs.
 - On Gemini's free tier, Google may use prompts to improve its products. Don't demo with real patient data.
-- Chats, voice and camera frames are never stored; only check-in ratings for signed-in users, which they can delete at any time.
+- New accounts must agree on a consent screen before using the app. Saving expression readings is a separate opt-in checkbox that starts unchecked.
+- Chats, voice and camera images are never stored. Signed-in users' check-in ratings are stored, and expression words (e.g. "happy") only if they opted in. Readings are saved in the `expression_reading` table, appended to `backend/instance/expression_log.csv` and printed in the `make run` terminal. Users can delete them at any time.
 - Reports are only shared when the user chooses to print or save them.

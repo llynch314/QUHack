@@ -19,7 +19,7 @@ endif
 CHECK_KEY := $(VENV_PY) -c "import sys; from dotenv import dotenv_values; k = (dotenv_values('.env').get('GEMINI_API_KEY') or '').strip(); sys.exit(0 if k and k != 'your_key_here' else 'GEMINI_API_KEY is not set. Run make env, then paste your key into backend/.env')"
 
 .DEFAULT_GOAL := help
-.PHONY: help setup install install-voice env check-key run chat webcam
+.PHONY: help setup install install-voice env check-key run chat webcam expressions watch
 
 help:
 	@echo Commands:
@@ -27,6 +27,8 @@ help:
 	@echo   make run            Start the Flask web app at http://127.0.0.1:5000
 	@echo   make chat           Chat with the Gemini bot in the terminal
 	@echo   make webcam         Webcam emotion detection demo, press q to quit
+	@echo   make expressions    Show the latest saved expression readings from the database
+	@echo   make watch          Live view of expression readings as they are saved (for demos)
 	@echo   make install-voice  Install the optional voice dependencies
 
 setup: install env
@@ -55,3 +57,9 @@ chat: check-key
 
 webcam: check-key
 	cd backend && $(VENV_PY) emotional_recognition.py
+
+expressions: $(VENV_MARKER)
+	cd backend && $(VENV_PY) show_expressions.py
+
+watch: $(VENV_MARKER)
+	cd backend && $(VENV_PY) show_expressions.py --follow

@@ -37,7 +37,7 @@
             <tbody>
             {% for c in checkins|reverse %}
                 <tr>
-                    <td><time datetime="{{ c.created_at.isoformat() }}" class="local-time">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</time></td>
+                    <td><time datetime="{{ c.created_at|iso }}" class="local-time">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</time></td>
                     <td>{{ c.activity|replace('-', ' ')|capitalize }}</td>
                     <td>{{ c.stress_before if c.stress_before is not none else '-' }}</td>
                     <td>{{ c.stress_after if c.stress_after is not none else '-' }}</td>
@@ -52,7 +52,7 @@
         <h2 id="share-h">Share with a therapist, doctor or parent</h2>
         <p>You can print this page or save it as a PDF and give it to someone on your care team. Before you do:</p>
         <ul>
-            <li>It includes your name, every check-in rating and the dates above. It does <strong>not</strong> include your chats.</li>
+            <li>It includes your name, every check-in rating, any saved expression readings and their dates. It does <strong>not</strong> include your chats.</li>
             <li>Once you share it, the person you give it to controls their copy. Health providers keep records under their own privacy rules (such as HIPAA in the US).</li>
             <li>Sharing is always your choice. Mind Connect never sends reports automatically.</li>
         </ul>
@@ -61,9 +61,52 @@
     </section>
 {% endif %}
 
+<h2>Expression readings</h2>
+<section class="card stack" aria-labelledby="expr-h" style="margin-top:8px">
+    <h3 id="expr-h" class="sr-only">Expression readings</h3>
+    {% if total_readings %}
+        <p><strong>{{ total_readings }}</strong> readings saved from your camera.
+            {% for emotion, n in expression_counts %}{{ emotion|capitalize }}: {{ n }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+        <div style="overflow-x:auto">
+            <table>
+                <caption class="sr-only">Most recent expression readings</caption>
+                <thead><tr><th scope="col">Time</th><th scope="col">Expression</th><th scope="col">During</th></tr></thead>
+                <tbody>
+                {% for r in readings|reverse %}
+                    <tr>
+                        <td><time datetime="{{ r.created_at|iso }}" class="local-time">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</time></td>
+                        <td>{{ r.emotion|capitalize }}</td>
+                        <td>{{ 'Voice chat' if r.source == 'voice' else 'Text chat' }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if total_readings > readings|length %}<p class="muted">Showing the latest {{ readings|length }}.</p>{% endif %}
+    {% elif current_user.save_expressions %}
+        <p>No readings yet. Turn on "Use my camera" in <a href="{{ url_for('chat') }}">Chat</a> and they'll appear here.</p>
+    {% else %}
+        <p class="muted">Expression saving is off, so nothing is saved.</p>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('auth.set_expression_saving') }}" class="row no-print">
+        {% if current_user.save_expressions %}
+            <span>Saving is <strong>on</strong>.</span>
+            <button type="submit" class="btn">Turn off saving</button>
+        {% else %}
+            <input type="hidden" name="save_expressions" value="yes">
+            <span>Saving is <strong>off</strong>.</span>
+            <button type="submit" class="btn">Turn on saving</button>
+        {% endif %}
+    </form>
+    {% if total_readings %}
+        <div class="no-print"><button type="button" class="btn btn-ghost" id="deleteExprBtn">Delete all expression readings</button></div>
+    {% endif %}
+</section>
+
 <section class="card stack no-print" aria-labelledby="data-h" style="margin-top:16px">
     <h2 id="data-h">Your data</h2>
-    <p>Signed in as {{ current_user.email or current_user.name }}. You can permanently delete your account and all check-ins at any time.</p>
+    <p>Signed in as {{ current_user.email or current_user.name }}. You can permanently delete your account, check-ins and expression readings at any time.</p>
     <div><button type="button" class="btn" id="deleteBtn">Delete my account and data</button></div>
     <p id="deleteStatus" role="status"></p>
 </section>
@@ -82,6 +125,13 @@
         consent.addEventListener('change', () => { printBtn.disabled = !consent.checked; });
         printBtn.addEventListener('click', () => window.print());
     }
+
+    const deleteExprBtn = document.getElementById('deleteExprBtn');
+    if (deleteExprBtn) deleteExprBtn.addEventListener('click', async () => {
+        if (!confirm('Delete all saved expression readings? This cannot be undone.')) return;
+        const res = await fetch('/api/expressions/delete', { method: 'POST' });
+        if (res.ok) location.reload();
+    });
 
     document.getElementById('deleteBtn').addEventListener('click', async () => {
         if (!confirm('Permanently delete your account and all check-ins? This cannot be undone.')) return;
