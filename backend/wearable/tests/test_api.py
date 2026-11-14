@@ -537,3 +537,17 @@ def test_demo_console_rejects_non_patients(app):
 def integrations_demo_user(role):
     from wearable import integrations
     return integrations.demo_user(role)
+
+
+def test_watch_alerts_reach_family_phones_like_team_alerts(patient_client, monkeypatch):
+    """Watch alerts go through the team's own phone notifier (push + text), whatever main calls it."""
+    from wearable import integrations
+    sent = []
+    monkeypatch.setattr(integrations, '_team_notifier', lambda: (lambda alert: sent.append(alert.kind)))
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'cardiac_warning'})
+    assert sent == ['cardiac_warning']
+
+
+def test_team_notifier_exists_in_main():
+    from wearable import integrations
+    assert callable(integrations._team_notifier())
