@@ -3,7 +3,7 @@
   Patient  : manages their care team, documents and alerts (Care Team page)
   Provider : sees and adds health documents for patients who added them (My Patients page)
   Family   : sees and acknowledges urgent alerts for patients who added them (Alerts page),
-             and can get them by text message too (see sms.py)
+             and can get them as phone notifications (push.py) or text messages (sms.py)
 """
 from datetime import timedelta
 
@@ -11,6 +11,7 @@ from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect, r
                    url_for)
 
 from auth import require_access, roles_required
+import push
 import sms
 from models import (ALERT_KINDS, ALERT_LABELS, Alert, CareLink, HealthDocument, PhoneVerification, User,
                     _now, as_utc, db)
@@ -49,21 +50,25 @@ def create_alert(patient, kind, source, note=''):
     alert = Alert(patient_id=patient.id, kind=kind, source=source, note=(note or '')[:500])
     db.session.add(alert)
     db.session.commit()
-    text_family(alert)
+    notify_family(alert)
     return alert
 
 
-def text_family(alert):
-    """Text every linked family member who confirmed a phone number and kept text alerts on."""
+def notify_family(alert):
+    """Send the alert to linked family members' phones: a push notification if they turned
+    those on, and a text if they confirmed a number. Never includes chat text or the note."""
     family = (User.query.join(CareLink, CareLink.member_id == User.id)
-              .filter(CareLink.patient_id == alert.patient_id, User.role == 'family',
-                      User.phone.isnot(None), User.sms_alerts.is_(True)).all())
-    if not family:
-        return 0
-    body = sms.alert_text(alert.patient.display_name, ALERT_LABELS.get(alert.kind, alert.kind),
-                          url_for('care.family_home', _external=True))
-    sms.dispatch([(member.phone, body) for member in family])
-    return len(family)
+              .filter(CareLink.patient_id == alert.patient_id, User.role == 'family').all())
+    name, label = alert.patient.display_name, ALERT_LABELS.get(alert.kind, alert.kind)
+    alerts_url = url_for('care.family_home', _external=True)
+    texts = [(m.phone, sms.alert_text(name, label, alerts_url)) for m in family if m.phone and m.sms_alerts]
+    pushes = [dict(topic=m.ntfy_topic, title=f'{label}: {name}', urgent=True, click=alerts_url,
+                   message=f'{name} may need support. Tap to open your Alerts page. '
+                           f'If they might be in danger, call or text 988, or call 911.')
+              for m in family if m.ntfy_topic]
+    sms.dispatch(texts)
+    push.dispatch(pushes)
+    return len(texts) + len(pushes)
 
 
 def alert_from_chat(patient, kind):
@@ -251,6 +256,54 @@ def api_phone_test():
         current_app.logger.exception('Could not send test text')
         abort(502, "We couldn't send the test text. Please try again later.")
     return jsonify(sent=True, demo_mode=not sms.twilio_configured())
+
+
+# ---------- Phone push notifications (family) ----------
+
+def _push_state(user):
+    topic = user.ntfy_topic
+    return {'on': bool(topic), 'topic': topic, 'server': push.server(),
+            'url': push.topic_url(topic) if topic else None}
+
+
+@bp.get('/api/me/push')
+@roles_required('family')
+def api_push():
+    return jsonify(_push_state(g.user))
+
+
+@bp.post('/api/me/push')
+@roles_required('family')
+def api_push_on():
+    """Turn on (or, with {"new": true}, replace) the private topic for this family member."""
+    if not g.user.ntfy_topic or _json().get('new'):
+        g.user.ntfy_topic = push.new_topic()
+        db.session.commit()
+    return jsonify(_push_state(g.user))
+
+
+@bp.delete('/api/me/push')
+@roles_required('family')
+def api_push_off():
+    g.user.ntfy_topic = None
+    db.session.commit()
+    return jsonify(_push_state(g.user))
+
+
+@bp.post('/api/me/push/test')
+@roles_required('family')
+def api_push_test():
+    if not g.user.ntfy_topic:
+        abort(400, 'Turn on phone notifications first.')
+    try:
+        push.send_push(g.user.ntfy_topic, 'AttuneMIND test',
+                       "Phone notifications are working. You'll get one like this if someone who "
+                       'added you to their care team needs support.',
+                       click=url_for('care.family_home', _external=True))
+    except Exception:
+        current_app.logger.exception('Could not send test notification')
+        abort(502, "We couldn't send the test notification. Please check your internet connection and try again.")
+    return jsonify(sent=True)
 
 
 # ---------- Health documents API (patient + linked providers) ----------

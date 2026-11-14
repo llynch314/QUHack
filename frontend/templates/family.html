@@ -11,6 +11,37 @@
     <div class="card"><p>No one has added you yet. Ask them to add <strong>{{ current_user.email }}</strong> on their AttuneMIND Care Team page.</p></div>
 {% endif %}
 
+<section class="card stack" aria-labelledby="push-h" style="margin-bottom:16px">
+    <h2 id="push-h">Phone notifications</h2>
+    <p class="muted">Get a notification on your phone when there's a new alert, using the free ntfy app. No account needed.
+        Notifications only say who needs support and what kind of alert it is, never what they wrote.</p>
+
+    <div id="pushOff" hidden>
+        <button type="button" class="btn btn-primary" id="pushOn">Set up phone notifications</button>
+    </div>
+
+    <div id="pushSetup" class="stack" hidden>
+        <ol class="stack">
+            <li>Install <strong>ntfy</strong> on your phone:
+                <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a> ·
+                <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a></li>
+            <li>In the app, tap <strong>+</strong> (Subscribe to topic) and enter this topic name exactly:
+                <div class="row" style="margin-top:6px">
+                    <code id="pushTopic" style="font-size:1.05em;user-select:all;word-break:break-all"></code>
+                    <button type="button" class="btn" id="pushCopy">Copy</button>
+                </div>
+                <span class="muted">Leave the server as <span id="pushServer"></span>. Keep this name private: anyone who has it can see your notifications.</span></li>
+            <li>Allow notifications when your phone asks, then press <strong>Send a test notification</strong> below.</li>
+        </ol>
+        <div class="row">
+            <button type="button" class="btn btn-primary" id="pushTest">Send a test notification</button>
+            <button type="button" class="btn" id="pushNew">Get a new topic name</button>
+            <button type="button" class="btn" id="pushStop">Turn off</button>
+        </div>
+    </div>
+    <p id="pushStatus" class="status" role="status"></p>
+</section>
+
 <section class="card stack" aria-labelledby="sms-h" style="margin-bottom:16px">
     <h2 id="sms-h">Text me alerts</h2>
     <p class="muted">Get a text message when there's a new alert, so you don't need to keep this page open.
@@ -203,5 +234,54 @@
     });
 
     smsApi('/api/me/phone', 'GET').then(showPhone).catch(() => {});
+
+    // ---- Phone push notifications (ntfy) ----
+    const pushEl = {
+        off: document.getElementById('pushOff'), setup: document.getElementById('pushSetup'),
+        topic: document.getElementById('pushTopic'), server: document.getElementById('pushServer'),
+        status: document.getElementById('pushStatus'),
+    };
+
+    function showPush(state) {
+        pushEl.off.hidden = state.on;
+        pushEl.setup.hidden = !state.on;
+        pushEl.topic.textContent = state.topic || '';
+        pushEl.server.textContent = state.server.replace(/^https?:\/\//, '');
+    }
+
+    async function pushRun(action, okMessage) {
+        pushEl.status.textContent = '';
+        try {
+            const data = await action();
+            if (okMessage) pushEl.status.textContent = okMessage;
+            return data;
+        } catch (err) {
+            pushEl.status.textContent = err.message;
+        }
+    }
+
+    document.getElementById('pushOn').addEventListener('click', async () => {
+        const state = await pushRun(() => smsApi('/api/me/push', 'POST'), 'Now follow the steps below on your phone.');
+        if (state) showPush(state);
+    });
+    document.getElementById('pushTest').addEventListener('click', () =>
+        pushRun(() => smsApi('/api/me/push/test', 'POST'),
+            "Test sent. If it didn't show up on your phone, check the topic name matches exactly."));
+    document.getElementById('pushCopy').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(pushEl.topic.textContent); pushEl.status.textContent = 'Topic name copied.'; }
+        catch { pushEl.status.textContent = 'Select the topic name and copy it.'; }
+    });
+    document.getElementById('pushNew').addEventListener('click', async () => {
+        if (!confirm('Get a new topic name? Your phone will stop getting alerts until you subscribe to the new one.')) return;
+        const state = await pushRun(() => smsApi('/api/me/push', 'POST', { new: true }),
+            'New topic name ready. Subscribe to it in the ntfy app (you can unsubscribe from the old one).');
+        if (state) showPush(state);
+    });
+    document.getElementById('pushStop').addEventListener('click', async () => {
+        const state = await pushRun(() => smsApi('/api/me/push', 'DELETE'), 'Phone notifications are off.');
+        if (state) showPush(state);
+    });
+
+    smsApi('/api/me/push', 'GET').then(showPush).catch(() => {});
 </script>
 {% endblock %}
