@@ -54,7 +54,7 @@ def build_report(patient_id, days=7, now=None):
         emergencies.append((grp[0].kind or 'cardiac_warning', grp[0].ts))
 
     lines = [f'# Wearable report', '',
-             f'Period: {_fmt(since)} to {_fmt(now)} (last {days} days). Generated automatically by AttuneMind '
+             f'Period: {_fmt(since)} to {_fmt(now)} (last {days} days). Generated automatically by attuneMIND '
              'from the patient\'s wearable. This is a summary for the next appointment, not a diagnosis.', '']
 
     lines += ['## Stress episodes', '']

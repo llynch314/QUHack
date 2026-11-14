@@ -1,4 +1,4 @@
-// AttuneMind "My Watch" page: live state, nudges, emergency overlay, timeline, demo panel,
+// attuneMIND "My Watch" page: live state, nudges, emergency overlay, timeline, demo panel,
 // device pairing, settings and the privacy panel. Plain JS + fetch, polls every 5 s.
 (function () {
     const PID = window.W_PATIENT_ID;
@@ -82,7 +82,7 @@
             if (shownNudge !== n.id) {
                 shownNudge = n.id;
                 if ('Notification' in window && Notification.permission === 'granted') {
-                    try { new Notification('AttuneMind', { body: n.message }); } catch (e) { /* ignore */ }
+                    try { new Notification('attuneMIND', { body: n.message }); } catch (e) { /* ignore */ }
                 }
                 if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             }

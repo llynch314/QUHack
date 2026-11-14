@@ -105,7 +105,7 @@ def _run_in_process(patient_id, scenario, seed):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description='AttuneMind wearable simulator')
+    p = argparse.ArgumentParser(description='attuneMIND wearable simulator')
     p.add_argument('--scenario', required=True, choices=SCENARIOS)
     p.add_argument('--patient', type=int, help='patient (user) id, writes straight to the local DB')
     p.add_argument('--demo-patient', action='store_true', help='use the DEV_LOGIN demo patient')

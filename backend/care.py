@@ -131,7 +131,7 @@ def api_add_member():
     email = (_json().get('email') or '').strip().lower()
     member = User.query.filter(db.func.lower(User.email) == email).first() if email else None
     if member is None:
-        abort(404, 'No AttuneMIND account uses that email. Ask them to sign in once first, '
+        abort(404, 'No attuneMIND account uses that email. Ask them to sign in once first, '
                    'using the provider or family sign-in.')
     if member.role not in ('provider', 'family'):
         abort(400, 'You can only add health providers and family members.')
@@ -191,7 +191,7 @@ def api_phone_start():
         abort(429, 'A code was just sent. Please wait a minute before asking for another.')
     code, code_hash = sms.new_code()
     try:
-        sms.send_sms(phone, f'Your AttuneMIND code is {code}. It expires in 10 minutes. '
+        sms.send_sms(phone, f'Your attuneMIND code is {code}. It expires in 10 minutes. '
                             f"If you didn't ask for this, you can ignore it.")
     except Exception:
         current_app.logger.exception('Could not send verification code')
@@ -250,7 +250,7 @@ def api_phone_test():
     if not g.user.phone:
         abort(400, 'Add and confirm a phone number first.')
     try:
-        sms.send_sms(g.user.phone, 'AttuneMIND test: text alerts are working. You will get a text like '
+        sms.send_sms(g.user.phone, 'attuneMIND test: text alerts are working. You will get a text like '
                                    'this if someone who added you to their care team needs support.')
     except Exception:
         current_app.logger.exception('Could not send test text')
@@ -296,7 +296,7 @@ def api_push_test():
     if not g.user.ntfy_topic:
         abort(400, 'Turn on phone notifications first.')
     try:
-        push.send_push(g.user.ntfy_topic, 'AttuneMIND test',
+        push.send_push(g.user.ntfy_topic, 'attuneMIND test',
                        "Phone notifications are working. You'll get one like this if someone who "
                        'added you to their care team needs support.',
                        click=url_for('care.family_home', _external=True))

@@ -38,6 +38,33 @@
 :root[data-font="readable"] { --font: "Lexend", system-ui, sans-serif; --letter-spacing: .04em; --word-spacing: .12em; --line-height: 1.8; }
 :root[data-font="hyperlegible"] { --font: "Atkinson Hyperlegible", system-ui, sans-serif; --line-height: 1.7; }
 
+/* Color palettes (Aa menu > Colors). They only change the light theme; Dark and High contrast win. */
+:root[data-palette="ocean"][data-theme="light"] { --bg: #E9F1F4; --header: #8DB4C4; --surface: #F7FBFC; --line: #BCD2DB; --teal: #9FD0CF; }
+:root[data-palette="lavender"][data-theme="light"] { --bg: #F1ECF6; --header: #B5A4CC; --surface: #FBF8FD; --line: #D5C9E3; --teal: #B9D3E8; }
+:root[data-palette="sunrise"][data-theme="light"] { --bg: #FAEBDF; --header: #E2AE8C; --surface: #FDF7F1; --line: #E9CDB7; --teal: #A9CFC6; }
+:root[data-palette="gray"][data-theme="light"] { --bg: #EFEFEF; --header: #C4C4C4; --ink: #1C1C1C; --ink-soft: #4A4A4A; --surface: #FAFAFA; --line: #C9C9C9; --teal: #BDBDBD; }
+@media (prefers-color-scheme: light) {
+  :root[data-palette="ocean"]:not([data-theme]) { --bg: #E9F1F4; --header: #8DB4C4; --surface: #F7FBFC; --line: #BCD2DB; --teal: #9FD0CF; }
+  :root[data-palette="lavender"]:not([data-theme]) { --bg: #F1ECF6; --header: #B5A4CC; --surface: #FBF8FD; --line: #D5C9E3; --teal: #B9D3E8; }
+  :root[data-palette="sunrise"]:not([data-theme]) { --bg: #FAEBDF; --header: #E2AE8C; --surface: #FDF7F1; --line: #E9CDB7; --teal: #A9CFC6; }
+  :root[data-palette="gray"]:not([data-theme]) { --bg: #EFEFEF; --header: #C4C4C4; --ink: #1C1C1C; --ink-soft: #4A4A4A; --surface: #FAFAFA; --line: #C9C9C9; --teal: #BDBDBD; }
+}
+
+/* Easier navigation (Aa menu) */
+:root[data-links="underline"] a { text-decoration: underline !important; text-decoration-thickness: 2px; }
+:root[data-targets="big"] .btn, :root[data-targets="big"] button:not(.dot):not(.menu-btn),
+:root[data-targets="big"] input[type="text"], :root[data-targets="big"] textarea, :root[data-targets="big"] select { min-height: 56px; }
+:root[data-targets="big"] .btn, :root[data-targets="big"] button:not(.dot):not(.menu-btn) { padding: .8rem 1.5rem; }
+:root[data-targets="big"] .menu a, :root[data-targets="big"] .menu button { padding: 1rem 1rem; }
+:root[data-focus="strong"] :focus-visible { outline: 4px solid #F5B700 !important; outline-offset: 3px; box-shadow: 0 0 0 7px #1C1C1C !important; }
+
+/* Reading guide (dyslexia aid): a soft band that follows the pointer */
+.reading-guide {
+  position: fixed; left: 0; right: 0; height: 2.6em; pointer-events: none; z-index: 40;
+  background: rgba(255, 230, 120, .28); border-top: 2px solid rgba(180, 140, 0, .45); border-bottom: 2px solid rgba(180, 140, 0, .45);
+}
+:root[data-theme="contrast"] .reading-guide { background: rgba(0, 255, 255, .18); border-color: #0ff; }
+
 /* ---------- Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 body {
@@ -62,6 +89,7 @@ p { max-width: 68ch; }
   position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   background: var(--header); padding: .9rem 1.25rem;
 }
+.brand strong { font-weight: 700; letter-spacing: .03em; }
 .brand {
   font-weight: 600; font-size: 1.35rem; letter-spacing: .01em; margin: 0; text-align: center;
   display: inline-flex; align-items: center; gap: .5rem; justify-self: center;
@@ -105,9 +133,13 @@ p { max-width: 68ch; }
 .a11y-menu summary:hover { background: rgba(255,255,255,.2); }
 .a11y-menu summary::-webkit-details-marker { display: none; }
 .a11y-panel {
-  position: absolute; right: 0; top: calc(100% + .4rem); z-index: 20; width: min(340px, calc(100vw - 2rem));
+  position: absolute; right: 0; top: calc(100% + .4rem); z-index: 30; width: min(360px, calc(100vw - 2rem));
+  max-height: min(78vh, 680px); overflow-y: auto;
   background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 1rem;
 }
+.a11y-title { font-size: 1.1rem; margin: 0 0 .8rem; }
+.a11y-help { font-size: .85rem; color: var(--ink-soft); margin: .35rem 0 0; }
+.a11y-reset { width: 100%; margin-top: .3rem; }
 .a11y-panel fieldset { border: 0; padding: 0; margin: 0 0 .8rem; }
 .a11y-panel legend { font-weight: 600; margin-bottom: .35rem; }
 .seg { display: flex; flex-wrap: wrap; gap: .4rem; }
@@ -212,6 +244,28 @@ th, td { text-align: left; padding: .6rem .4rem; border-bottom: 1.5px solid var(
 .status { font-size: .95rem; color: var(--ink-soft); min-height: 1.5em; }
 .voice-level { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
 .voice-level span { display: block; height: 100%; width: 0; background: var(--ink); transition: width .1s; }
+
+/* Chat toolbar: voice, camera and read-aloud on top of the chat */
+.chat-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-bottom: .75rem; }
+.chat-toolbar .btn { min-height: 44px; }
+.chat-toolbar .btn[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.chat-toolbar .btn .live-dot { width: 10px; height: 10px; border-radius: 50%; background: #D4705F; display: none; }
+.chat-toolbar .btn[aria-pressed="true"] .live-dot { display: inline-block; animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.chat-live { display: grid; grid-template-columns: 1fr auto; gap: .75rem; align-items: start; margin-bottom: .75rem; }
+.chat-live[hidden] { display: none; }
+.chat-live .voice-panel[hidden], .chat-live .cam-panel[hidden] { display: none; }
+.chat-live #webcam { width: 160px; }
+@media (max-width: 560px) { .chat-live { grid-template-columns: 1fr; } .chat-live #webcam { width: 100%; } }
+
+/* 5-4-3-2-1 grounding (static/js/grounding.js) */
+.ground-senses { display: grid; gap: .9rem; }
+.ground-sense { border: 1.5px solid var(--line); border-radius: 16px; padding: .8rem 1rem; background: var(--bg); }
+.ground-sense legend { font-weight: 600; padding: 0 .3rem; float: left; width: 100%; margin-bottom: .5rem; }
+.ground-sense .ground-count { font-weight: 400; color: var(--ink-soft); font-size: .9rem; margin-left: .3rem; }
+.ground-sense .ground-inputs { clear: both; display: grid; gap: .45rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.ground-sense.done { border-color: var(--ink-soft); }
+.ground-sense.done legend::after { content: " ✓"; }
 
 /* Calm toolkit */
 .tool { scroll-margin-top: 80px; }

@@ -1,0 +1,19 @@
+{# Voice, camera and read-aloud buttons on top of the chat. Same markup is copied into
+   frontend/test.html (the patient app, a static page); keep the two in step. Wired up by chat.js + voice.js. #}
+<div class="chat-toolbar" role="group" aria-label="Chat options">
+    <button type="button" class="btn" id="voiceToggle" aria-pressed="false" aria-label="Start voice chat"
+            title="Talk out loud and hear replies. Headphones work best."><span class="live-dot" aria-hidden="true"></span>🎙️ Voice chat</button>
+    <button type="button" class="btn" id="camToggle" aria-pressed="false"
+            title="Let the AI notice your facial expression. Nothing is saved unless you turn that on."><span class="live-dot" aria-hidden="true"></span>📹 Camera</button>
+    <button type="button" class="btn" id="speakToggle" aria-pressed="false">🔊 Read replies aloud</button>
+</div>
+<div class="chat-live card" id="chatLive" hidden>
+    <div class="stack">
+        <div class="voice-panel stack" id="voicePanel" hidden>
+            <div class="voice-level" aria-hidden="true"><span id="voiceLevel"></span></div>
+            <p id="voiceStatus" class="status" role="status"></p>
+        </div>
+        <p id="camStatus" class="status" role="status"></p>
+    </div>
+    <video id="webcam" autoplay playsinline muted hidden aria-label="Your camera preview"></video>
+</div>

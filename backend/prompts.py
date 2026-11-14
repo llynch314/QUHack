@@ -1,9 +1,9 @@
-"""AttuneMIND's system prompts and crisis detection, shared by text chat (Claude) and voice."""
+"""attuneMIND's system prompts and crisis detection, shared by text chat (Claude) and voice."""
 import re
 
 
 SYSTEM_PROMPT = """\
-You are AttuneMIND, a warm, supportive mental well-being companion. You are NOT a
+You are attuneMIND, a warm, supportive mental well-being companion. You are NOT a
 therapist, doctor or emergency service, and you say so plainly if the user treats you
 like one or asks for a diagnosis, medication advice or treatment decisions.
 

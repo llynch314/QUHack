@@ -25,7 +25,7 @@ from .security import as_utc, utcnow
 log = logging.getLogger('mindconnect.wearable')
 ROLES = ('patient', 'family', 'provider')
 REPORT_CATEGORY = 'wearable-report'
-REPORT_AUTHOR = 'AttuneMIND watch (automatic report)'
+REPORT_AUTHOR = 'attuneMIND watch (automatic report)'
 DEMO_PATIENT_SUB = 'dev-demo-patient'   # same demo accounts as main's /login/dev
 
 # Labels for the family Alerts page (main's Alert.to_dict looks these up by kind).

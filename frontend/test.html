@@ -3,15 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>attunemind</title>
+<title>attuneMIND</title>
 <!-- Paths are relative so this page works from the app (make run, /test) and opened straight from disk. -->
 <link rel="icon" type="image/png" href="static/img/favicon.png">
 <link rel="apple-touch-icon" href="static/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Lexend:wght@400;600&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="static/css/attune.css">
 <link rel="stylesheet" href="static/css/aura.css">
+<script>
+  // Demo mode: sample data, nothing saved. Used when there's no backend to talk to:
+  // opened straight from disk, hosted on GitHub Pages, or with ?demo in the address.
+  window.ATTUNE_DEMO = location.protocol === "file:" || /\.github\.io$/.test(location.hostname) ||
+                       /[?&]demo(=|&|$)/.test(location.search);
+  if (window.ATTUNE_DEMO) document.documentElement.classList.add("demo");
+</script>
 <script>
   // Saved accessibility settings (text size, colors...) from the other pages
   try { var s = JSON.parse(localStorage.getItem('mc-a11y') || '{}');
@@ -20,6 +27,7 @@
 <style>
 :root{ padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px) }
 .view[hidden]{display:none}
+.demo [data-server-only]{display:none !important}   /* links that need the Flask app */
 .preview-banner{background:var(--teal); color:#1E2E2F; text-align:center; padding:.5rem 1rem; font-size:.95rem}
 .preview-banner a{color:inherit; font-weight:600}
 
@@ -74,15 +82,16 @@ blockquote{
 <body>
 <a class="skip-link" href="#main">Skip to main content</a>
 <div class="preview-banner" id="previewBanner" hidden>
-  Preview with sample data. To sign in and save, run <strong>make run</strong> and open
-  <a href="http://127.0.0.1:5000/dashboard">127.0.0.1:5000/dashboard</a>.
+  <span id="bannerDemo">Demo with sample data: try anything, nothing is saved.</span>
+  <span id="bannerLocal" hidden>Preview with sample data. To sign in and save, run <strong>make run</strong> and open
+    <a href="http://127.0.0.1:5000/dashboard">127.0.0.1:5000/dashboard</a>.</span>
 </div>
 
 <header class="bar">
   <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
     <span></span><span></span><span></span>
   </button>
-  <a class="brand" href="#dashboard"><img class="brand-mark" src="static/img/logo-mark.png" alt="" width="256" height="281"><span>attune<strong>mind</strong></span></a>
+  <a class="brand" href="#dashboard"><img class="brand-mark" src="static/img/logo-mark.png" alt="" width="256" height="281"><span>attune<strong>MIND</strong></span></a>
   <div class="bar-right"><span class="page-label" id="pageLabel">dashboard</span></div>
   <ul class="menu" id="menu" hidden>
     <li><a href="#dashboard">Dashboard</a></li>
@@ -90,9 +99,9 @@ blockquote{
     <li><a href="#chatbot">Chatbot</a></li>
     <li><a href="#toolkit">Calm Toolkit</a></li>
     <li><a href="#care-team">Care Team</a></li>
-    <li><a href="/wearable">My Watch</a></li><!-- wearable -->
+    <li data-server-only><a href="/wearable">My Watch</a></li><!-- wearable -->
     <li><a href="#settings">Settings</a></li>
-    <li><form method="post" action="/logout"><button type="submit">Sign out</button></form></li>
+    <li data-server-only><form method="post" action="/logout"><button type="submit">Sign out</button></form></li>
   </ul>
 </header>
 
@@ -156,18 +165,34 @@ blockquote{
   <div class="view" id="view-chatbot" data-label="chatbot" hidden>
     <h1 class="page-title">Chatbot</h1>
     <p class="lede">Talk things through. It's not a therapist, and replies can be wrong. Chats aren't saved.</p>
-    <div class="chat-log" id="chatLog" aria-live="polite" aria-label="Conversation">
+    <!-- Voice, camera and read-aloud on top of the chat (same markup as templates/_chat_toolbar.html) -->
+    <div class="chat-toolbar" role="group" aria-label="Chat options">
+      <button type="button" class="btn" id="voiceToggle" aria-pressed="false" aria-label="Start voice chat"
+              title="Talk out loud and hear replies. Headphones work best."><span class="live-dot" aria-hidden="true"></span>🎙️ Voice chat</button>
+      <button type="button" class="btn" id="camToggle" aria-pressed="false"
+              title="Let the AI notice your facial expression. Nothing is saved unless you turn that on."><span class="live-dot" aria-hidden="true"></span>📹 Camera</button>
+      <button type="button" class="btn" id="speakToggle" aria-pressed="false">🔊 Read replies aloud</button>
+    </div>
+    <div class="chat-live card" id="chatLive" hidden>
+      <div class="stack">
+        <div class="voice-panel stack" id="voicePanel" hidden>
+          <div class="voice-level" aria-hidden="true"><span id="voiceLevel"></span></div>
+          <p id="voiceStatus" class="status" role="status"></p>
+        </div>
+        <p id="camStatus" class="status" role="status"></p>
+      </div>
+      <video id="webcam" autoplay playsinline muted hidden aria-label="Your camera preview"></video>
+    </div>
+    <div class="chat-log" id="chatLog" role="log" aria-live="polite" aria-label="Conversation">
       <div class="bubble model">Hi, I'm here to listen. What's on your mind today?</div>
     </div>
     <form class="chat-form" id="chatForm">
       <label for="chatInput" class="sr-only">Your message</label>
-      <textarea id="chatInput" rows="2" placeholder="Type how you're feeling..." required></textarea>
-      <button type="submit" class="btn btn-primary" id="chatSend">Send</button>
+      <textarea id="chatInput" rows="2" placeholder="Type how you're feeling... (Enter to send)" maxlength="4000" required></textarea>
+      <button type="button" id="dictateBtn" class="btn btn-ghost" title="Type with your voice" aria-label="Type with your voice">🎤</button>
+      <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
     </form>
-    <div class="row" style="margin-top:.75rem">
-      <label class="check"><input type="checkbox" id="chatSpeak"> Read replies aloud</label>
-      <a href="/chat" class="muted">Voice and camera chat</a>
-    </div>
+    <p id="chatStatus" class="status" role="status"></p>
     <section class="crisis-panel" id="crisisPanel" hidden style="margin-top:1rem">
       <h2>You don't have to go through this alone</h2>
       <p>Call or text <a href="tel:988">988</a> (US Suicide &amp; Crisis Lifeline), text HOME to <a href="sms:741741">741741</a>,
@@ -191,11 +216,7 @@ blockquote{
       </section>
       <section class="card stack" aria-labelledby="groundH">
         <h2 id="groundH">5-4-3-2-1 grounding</h2>
-        <p class="muted">Notice what's around you, one sense at a time.</p>
-        <div class="progress" aria-hidden="true"><span id="groundProgress"></span></div>
-        <p class="breath-cue" id="groundPrompt" aria-live="polite"></p>
-        <div class="row"><button type="button" class="btn" id="groundBack">Back</button>
-          <button type="button" class="btn btn-primary" id="groundNext">Next</button></div>
+        <div data-grounding></div>
         <div data-checkin="grounding"></div>
       </section>
     </div>
@@ -214,7 +235,7 @@ blockquote{
         <button type="button" class="btn sos" data-kind="other">Please check in on me</button>
       </div>
       <p id="sosStatus" class="status" role="status"></p>
-      <p class="crisis-line">If you're in danger, call or text <a href="tel:988">988</a> or call <a href="tel:911">911</a>. AttuneMIND can't send emergency help.</p>
+      <p class="crisis-line">If you're in danger, call or text <a href="tel:988">988</a> or call <a href="tel:911">911</a>. attuneMIND can't send emergency help.</p>
     </section>
     <section class="card stack" aria-labelledby="teamH">
       <h2 id="teamH">People on your care team</h2>
@@ -240,6 +261,16 @@ blockquote{
         <div><button type="submit" class="btn btn-primary">Add document</button></div>
       </form>
     </section>
+    <section class="card stack" aria-labelledby="mychartH">
+      <h2 id="mychartH">Connect your health record</h2>
+      <p>Already use <strong>MyChart</strong> or another patient portal? Open it to see visit notes, medications and test results,
+        or to message your care team. To share something here, copy it into <em>Add a document</em> above.</p>
+      <div class="row">
+        <a class="btn btn-primary" href="https://www.mychart.org/" target="_blank" rel="noopener">Open MyChart <span class="sr-only">(opens in a new tab)</span></a>
+        <a class="btn" href="https://www.mychart.org/LoginSignup" target="_blank" rel="noopener">Sign in or sign up <span class="sr-only">(opens in a new tab)</span></a>
+      </div>
+      <p class="muted">attuneMIND doesn't connect to MyChart directly yet, so nothing is shared automatically.</p>
+    </section>
     <section class="card stack" aria-labelledby="alertsH">
       <h2 id="alertsH">Recent alerts</h2>
       <ul class="list" id="alertList"></ul>
@@ -259,13 +290,13 @@ blockquote{
       <label class="check"><input type="checkbox" id="setGreeting"> <span>Say hello out loud when I open the dashboard</span></label>
       <label class="check"><input type="checkbox" id="setExpressions">
         <span>Save my camera expression readings (from voice and camera chat) to my account</span></label>
-      <p class="muted">Text size, font and colors can be changed with the <strong>Aa</strong> button on the other pages.</p>
+      <p class="muted">Text size, fonts, colors, read-aloud and other accessibility options are in the <strong>Aa</strong> button at the top right of every page (or press Alt + A).</p>
     </section>
     <section class="card stack" aria-labelledby="delH">
       <h2 id="delH">Your data</h2>
       <p>Permanently delete your account, moods, check-ins, health documents and alerts, and remove everyone from your care team.</p>
       <div class="row"><button type="button" class="btn btn-danger" id="deleteBtn">Delete my account</button>
-        <a class="muted" href="/privacy">Privacy &amp; disclosures</a></div>
+        <a class="muted" href="/privacy" data-server-only>Privacy &amp; disclosures</a></div>
       <p id="deleteStatus" class="status" role="status"></p>
     </section>
   </div>
@@ -280,6 +311,10 @@ blockquote{
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" defer></script>
 <script src="static/js/music.js" defer></script>
+<script src="static/js/a11y.js" defer></script>
+<script src="static/js/grounding.js" defer></script>
+<script src="static/js/chat.js" defer></script>
+<script src="static/js/voice.js" defer></script>
 <script src="test.js" defer></script>
 <script>window.ATTUNE_ROLE = "patient";</script>
 <script src="static/js/aura.js" defer></script>

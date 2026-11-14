@@ -1,4 +1,4 @@
-"""AttuneMIND web app. Run with `make run` (or `python app.py` from backend/)."""
+"""attuneMIND web app. Run with `make run` (or `python app.py` from backend/)."""
 import base64
 import csv
 import logging
@@ -337,5 +337,5 @@ def api_delete_me():
 
 if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':   # print once, not again on each auto-reload
-        print('\n  AttuneMIND is running. Open the dashboard: http://127.0.0.1:5000/dashboard\n', flush=True)
+        print('\n  attuneMIND is running. Open the dashboard: http://127.0.0.1:5000/dashboard\n', flush=True)
     app.run(debug=True)

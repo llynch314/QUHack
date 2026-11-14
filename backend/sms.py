@@ -84,6 +84,6 @@ def dispatch(messages):
 
 
 def alert_text(patient_name, label, alerts_url):
-    return (f'AttuneMIND alert: {patient_name} may need support ({label}). '
+    return (f'attuneMIND alert: {patient_name} may need support ({label}). '
             f'See your Alerts page: {alerts_url} . '
             f'If they might be in danger, call or text 988, or call 911.')

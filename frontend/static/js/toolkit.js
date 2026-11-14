@@ -105,50 +105,11 @@
     startBtn.addEventListener('click', runBreathing);
     stopBtn.addEventListener('click', stopBreathing);
 
-    // ---- 5-4-3-2-1 grounding ----
-    const steps = [
-        { n: 5, prompt: 'Name 5 things you can see' },
-        { n: 4, prompt: 'Name 4 things you can feel or touch' },
-        { n: 3, prompt: 'Name 3 things you can hear' },
-        { n: 2, prompt: 'Name 2 things you can smell' },
-        { n: 1, prompt: 'Name 1 thing you can taste, or one kind thing about yourself' },
-    ];
-    let step = 0;
-    const gSteps = document.getElementById('groundSteps');
-    const gPrompt = document.getElementById('groundPrompt');
-    const gInputs = document.getElementById('groundInputs');
-    const gProgress = document.getElementById('groundProgress');
-    const gNext = document.getElementById('groundNext');
-    const gBack = document.getElementById('groundBack');
-
-    function renderStep() {
-        const s = steps[step];
-        gPrompt.textContent = `${s.prompt} (${step + 1} of ${steps.length})`;
-        gInputs.innerHTML = '';
-        for (let i = 1; i <= s.n; i++) {
-            const id = `ground-${step}-${i}`;
-            const wrap = document.createElement('div');
-            wrap.innerHTML = `<label for="${id}" class="sr-only">${s.prompt}, item ${i}</label><input type="text" id="${id}" placeholder="${i}." autocomplete="off">`;
-            gInputs.appendChild(wrap);
-        }
-        gProgress.style.width = (step / steps.length * 100) + '%';
-        gBack.disabled = step === 0;
-        gNext.textContent = step === steps.length - 1 ? 'Finish' : 'Next';
-        gPrompt.focus();
-        if (MC.readAloudOn()) MC.speak(s.prompt);
-    }
-
-    document.getElementById('groundStart').addEventListener('click', () => {
-        step = 0;
-        gSteps.hidden = false;
-        renderStep();
-    });
-    gBack.addEventListener('click', () => { if (step > 0) { step--; renderStep(); } });
-    gNext.addEventListener('click', () => {
-        if (step < steps.length - 1) { step++; renderStep(); return; }
-        gProgress.style.width = '100%';
-        gSteps.hidden = true;
-        finishActivity(document.getElementById('grounding'));
+    // ---- 5-4-3-2-1 grounding (the boxes are built by grounding.js) ----
+    const grounding = document.getElementById('grounding');
+    grounding.addEventListener('grounding:done', () => {
+        const after = grounding.querySelector('.after');
+        if (after.hidden) finishActivity(grounding);
     });
 
     // ---- Thought record ----

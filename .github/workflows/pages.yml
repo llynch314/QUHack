@@ -1,0 +1,67 @@
+# Publishes the AttuneMIND demo (frontend/test.html with sample data) to GitHub Pages.
+#
+# GitHub Pages only serves static files, so this is the design/demo only: no sign-in,
+# no database, no AI chat. The full app (Flask backend) needs a server host.
+#
+# One-time setup: repo Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+# Then every push to main that changes frontend/ redeploys. You can also run it by hand
+# from the Actions tab ("Deploy demo to GitHub Pages" -> Run workflow).
+name: Deploy demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; don't cancel one that's already running.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the static site
+        run: |
+          mkdir -p _site
+          # The patient app is the home page. Its paths are relative, so it works under /QUHack/.
+          cp frontend/test.html _site/index.html
+          cp frontend/test.js _site/test.js
+          cp -r frontend/static _site/static
+          # Full-size logo originals aren't used by the pages; keep the site small.
+          rm -f _site/static/img/attunemind-logo-original-*.png
+          # Serve files as-is (no Jekyll processing).
+          touch _site/.nojekyll
+          # Safety net: never publish anything that looks like a secret.
+          if grep -rIlE "(sk-ant-|AIza[0-9A-Za-z_-]{20}|ANTHROPIC_API_KEY=.+|CLIENT_SECRET=.+)" _site; then
+            echo "Possible secret found in the site files; refusing to deploy." >&2
+            exit 1
+          fi
+          ls -R _site | head -50
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

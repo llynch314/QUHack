@@ -92,6 +92,16 @@ Emotion detection sends the image to Claude, so it uses the same `ANTHROPIC_API_
 3. Put the client ID and secret in `backend/.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and set `FLASK_SECRET_KEY` to a long random string.
 4. Open the app at `http://127.0.0.1:5000` (not `localhost`), so the redirect URI matches.
 
+## Online demo (GitHub Pages)
+
+GitHub Pages only hosts static files, so it shows the **demo**: the patient app (`frontend/test.html`) with sample data. Nothing is saved, and there's no sign-in, database or AI chat. The full app needs a server host for the Flask backend.
+
+- **Turn it on once:** repo **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+- **Deploys:** every push to `main` that changes `frontend/` runs `.github/workflows/pages.yml`, or run it by hand from the **Actions** tab.
+- **Address:** https://llynch314.github.io/QUHack/
+- **Demo mode** turns on automatically on `*.github.io`, when `test.html` is opened from disk, or with `?demo` in the address (e.g. `http://127.0.0.1:5000/test?demo`). Links that need the server (sign out, voice chat, privacy page, watch) are hidden in demo mode.
+- Never put API keys in `frontend/`: everything there is published. The workflow refuses to deploy if it finds something that looks like a key.
+
 ## Music for your mood (Spotify)
 
 Below the mood picker, a React card suggests calm Spotify playlists for the picked color and plays them in Spotify's embedded player. Create an app at the [Spotify developer dashboard](https://developer.spotify.com/dashboard) and set `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` in `backend/.env`. Without them the card shows a link to a Spotify search instead. No Spotify login is needed for patients.

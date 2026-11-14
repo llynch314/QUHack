@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>{% block title %}attunemind{% endblock %}</title>
+    <title>{% block title %}attuneMIND{% endblock %}</title>
     <!-- Apply saved accessibility settings before paint, so the page doesn't flash. -->
     <script>
         try {
@@ -26,54 +26,10 @@
         <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
             <span></span><span></span><span></span>
         </button>
-        <a class="brand" href="{{ url_for('index') }}"><img class="brand-mark" src="{{ url_for('static', filename='img/logo-mark.png') }}" alt="" width="256" height="281"><span>attune<strong>mind</strong></span></a>
+        <a class="brand" href="{{ url_for('index') }}"><img class="brand-mark" src="{{ url_for('static', filename='img/logo-mark.png') }}" alt="" width="256" height="281"><span>attune<strong>MIND</strong></span></a>
         <div class="bar-right">
             <span class="page-label">{% block page_label %}{% endblock %}</span>
-            <details class="a11y-menu">
-                <summary aria-label="Accessibility settings">Aa</summary>
-                <div class="a11y-panel" role="group" aria-label="Accessibility settings">
-                    <fieldset>
-                        <legend>Text size</legend>
-                        <div class="seg" data-setting="size">
-                            <button type="button" data-value="">A</button>
-                            <button type="button" data-value="lg" style="font-size:1.15em">A</button>
-                            <button type="button" data-value="xl" style="font-size:1.3em">A</button>
-                            <button type="button" data-value="xxl" style="font-size:1.45em">A</button>
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Font</legend>
-                        <div class="seg" data-setting="font">
-                            <button type="button" data-value="">Default</button>
-                            <button type="button" data-value="readable">Readable (dyslexia)</button>
-                            <button type="button" data-value="hyperlegible">Low vision</button>
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Colors</legend>
-                        <div class="seg" data-setting="theme">
-                            <button type="button" data-value="">Auto</button>
-                            <button type="button" data-value="light">Light</button>
-                            <button type="button" data-value="dark">Dark</button>
-                            <button type="button" data-value="contrast">High contrast</button>
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Motion</legend>
-                        <div class="seg" data-setting="motion">
-                            <button type="button" data-value="">Auto</button>
-                            <button type="button" data-value="reduce">Reduce motion</button>
-                        </div>
-                    </fieldset>
-                    <fieldset>
-                        <legend>Read aloud</legend>
-                        <div class="seg" data-setting="speak">
-                            <button type="button" data-value="">Off</button>
-                            <button type="button" data-value="on">Read replies aloud</button>
-                        </div>
-                    </fieldset>
-                </div>
-            </details>
+            {# The "Aa" accessibility menu is added here by static/js/a11y.js (one copy for every page). #}
         </div>
         <ul class="menu" id="menu" hidden>
             {% macro item(href, label, endpoint=None) -%}
@@ -122,7 +78,7 @@
     <footer class="site-footer">
         <p class="crisis-line"><strong>In crisis?</strong> In the US call or text <a href="tel:988">988</a>,
             text HOME to <a href="sms:741741">741741</a>, or call <a href="tel:911">911</a> in an emergency.</p>
-        <p>AttuneMIND is a support tool, not a therapist or emergency service. <a href="{{ url_for('privacy') }}">Privacy &amp; disclosures</a></p>
+        <p>attuneMIND is a support tool, not a therapist or emergency service. <a href="{{ url_for('privacy') }}">Privacy &amp; disclosures</a></p>
     </footer>
 
     <script>

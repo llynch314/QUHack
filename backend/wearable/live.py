@@ -237,7 +237,7 @@ class Feed:
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description='AttuneMind live terminal watch feed')
+    p = argparse.ArgumentParser(description='attuneMIND live terminal watch feed')
     p.add_argument('--url', default='http://127.0.0.1:5050')
     p.add_argument('--every', type=float, default=5, help='seconds between automatic readings (default 5)')
     p.add_argument('--mode', default='calm', choices=list(MODES))

@@ -1,10 +1,10 @@
-// AttuneMIND patient app: the script behind test.html.
+// attuneMIND patient app: the script behind test.html.
 // One page, one tab per #section: #dashboard, #mood-history, #chatbot, #toolkit, #care-team, #settings.
 // Served by the Flask app at /test (run `make run`). Opened straight from disk it shows sample data.
 (function () {
   "use strict";
 
-  var PREVIEW = location.protocol === "file:";
+  var PREVIEW = !!window.ATTUNE_DEMO;   // set in test.html: from disk, GitHub Pages, or ?demo
   var $ = function (id) { return document.getElementById(id); };
 
   // ---------- Small helpers ----------
@@ -12,6 +12,7 @@
   // Read text aloud with the browser's built-in speech synthesis.
   // Some browsers only allow speech after the user has clicked or tapped the page.
   function speak(text) {
+    if (window.MC && MC.speak) return MC.speak(text);
     if (!("speechSynthesis" in window)) return;
     var message = new SpeechSynthesisUtterance();
     message.text = text;
@@ -169,43 +170,9 @@
   };
 
   // ---------- Chatbot ----------
-
-  var Chatbot = (function () {
-    var history = [];
-    function bubble(role, text) {
-      var b = el("div", { class: "bubble " + role }, [text]);
-      $("chatLog").append(b);
-      $("chatLog").scrollTop = $("chatLog").scrollHeight;
-    }
-    function init() {
-      $("chatSpeak").checked = pref("speak-replies") === "1";
-      $("chatSpeak").addEventListener("change", function (e) { pref("speak-replies", e.target.checked ? "1" : "0"); });
-      $("chatInput").addEventListener("keydown", function (e) {
-        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("chatForm").requestSubmit(); }
-      });
-      $("chatForm").addEventListener("submit", function (e) {
-        e.preventDefault();
-        var text = $("chatInput").value.trim();
-        if (!text) return;
-        $("chatInput").value = "";
-        bubble("user", text);
-        history.push({ role: "user", text: text });
-        $("chatSend").disabled = true;
-        api("POST", "/api/chat", { messages: history, emotion: null }).then(function (data) {
-          history.push({ role: "model", text: data.reply });
-          bubble("model", data.reply);
-          if ($("chatSpeak").checked) speak(data.reply);
-          if (data.crisis) $("crisisPanel").hidden = false;
-          if (data.mood && window.Aura) Aura.setMood(data.mood, "chat");
-          if (data.alert_sent) bubble("system", "The family members on your care team were sent an alert so they can check in with you. They can't see what you wrote.");
-        }).catch(function (err) {
-          history.pop();
-          bubble("system", err.message);
-        }).then(function () { $("chatSend").disabled = false; $("chatInput").focus(); });
-      });
-    }
-    return { init: init };
-  })();
+  // The chat, its toolbar (voice chat, camera, read aloud) and dictation are in static/js/chat.js
+  // and static/js/voice.js, shared with the /chat page.
+  var Chatbot = {};
 
   // ---------- Calm Toolkit ----------
 
@@ -251,27 +218,13 @@
       $("breathStart").disabled = false; $("breathStop").disabled = true;
     }
 
-    var steps = [
-      "Name 5 things you can see", "Name 4 things you can feel or touch", "Name 3 things you can hear",
-      "Name 2 things you can smell", "Name 1 thing you can taste, or one kind thing about yourself"
-    ];
-    var step = 0;
-    function renderStep() {
-      var done = step >= steps.length;
-      $("groundPrompt").textContent = done ? "You did it. Take a slow breath." : steps[step] + " (" + (step + 1) + " of " + steps.length + ")";
-      $("groundProgress").style.width = (Math.min(step, steps.length) / steps.length * 100) + "%";
-      $("groundBack").disabled = step === 0;
-      $("groundNext").textContent = done ? "Start again" : step === steps.length - 1 ? "Finish" : "Next";
-    }
+    // 5-4-3-2-1 grounding boxes are built by static/js/grounding.js.
 
     function init() {
       $("breathStart").addEventListener("click", function () {
         $("breathStart").disabled = true; $("breathStop").disabled = false; breathe(0);
       });
       $("breathStop").addEventListener("click", stop);
-      $("groundNext").addEventListener("click", function () { step = step >= steps.length ? 0 : step + 1; renderStep(); });
-      $("groundBack").addEventListener("click", function () { if (step > 0) step--; renderStep(); });
-      renderStep();
       document.querySelectorAll("[data-checkin]").forEach(CheckIn);
     }
     return { init: init, leave: function () { if (timer) stop(); } };
@@ -392,7 +345,7 @@
     current = name;
     Object.keys(VIEWS).forEach(function (v) { $("view-" + v).hidden = v !== name; });
     $("pageLabel").textContent = $("view-" + name).dataset.label;
-    document.title = name === "dashboard" ? "attunemind" : $("view-" + name).dataset.label + " · attunemind";
+    document.title = name === "dashboard" ? "attuneMIND" : $("view-" + name).dataset.label + " · attuneMIND";
     document.querySelectorAll("#menu a").forEach(function (a) {
       if (a.getAttribute("href") === "#" + name) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
@@ -445,9 +398,9 @@
       else if (url === "/api/care-team" && method === "GET") out = { links: data.links };
       else if (/documents$/.test(url) && method === "GET") out = { documents: data.documents };
       else if (url === "/api/alerts") out = { alerts: data.alerts };
-      else if (url === "/api/chat") out = { reply: "This is a preview, so I can't reply for real. Run make run to chat.", crisis: false };
+      else if (url === "/api/chat") out = { reply: "This is a demo, so I can't reply for real. In the full app, an AI companion listens and helps you find your own answers.", crisis: false };
       else if (url === "/api/me/settings") out = body;
-      else if (method !== "GET") return Promise.reject(new Error("Preview only: run make run to save changes."));
+      else if (method !== "GET") return Promise.reject(new Error("This is a demo, so changes aren't saved."));
       return Promise.resolve(JSON.parse(JSON.stringify(out)));
     }
     return { handle: handle };
@@ -456,6 +409,8 @@
   // ---------- Start ----------
 
   $("previewBanner").hidden = !PREVIEW;
+  $("bannerLocal").hidden = location.protocol !== "file:";
+  $("bannerDemo").hidden = location.protocol === "file:";
   Object.keys(VIEWS).forEach(function (v) { if (VIEWS[v].init) VIEWS[v].init(); });
   window.addEventListener("hashchange", show);
   show();

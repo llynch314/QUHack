@@ -1,16 +1,26 @@
-// Voice mode: streams the microphone to /ws/voice (relayed to Gemini Live) and plays the reply.
+// Voice chat: streams the microphone to /ws/voice (relayed to Gemini Live) and plays the reply.
+// Started and stopped with the "Voice chat" button on top of the chat (#voiceToggle).
 (function () {
-    const startBtn = document.getElementById('voiceStart');
-    const stopBtn = document.getElementById('voiceStop');
+    const toggle = document.getElementById('voiceToggle');
     const status = document.getElementById('voiceStatus');
     const level = document.getElementById('voiceLevel');
-
+    if (!toggle) return;
+    let active = false;   // true from pressing the button until the session ends
 
     let ws = null, micStream = null, recordCtx = null, playCtx = null, frameTimer = null;
     let playTime = 0, playing = [];
     let current = null;   // transcript bubble being filled: { who, el, text }
 
-    function setStatus(text) { status.textContent = text; }
+    function setStatus(text) {
+        status.textContent = text;
+        if (window.MC.chat) window.MC.chat.updateLive();
+    }
+    function setActive(on) {
+        active = on;
+        toggle.setAttribute('aria-pressed', String(on));
+        toggle.setAttribute('aria-label', on ? 'Stop voice chat' : 'Start voice chat');
+        if (window.MC.chat) window.MC.chat.updateLive();
+    }
 
     // ---- Playback of 24 kHz PCM from Gemini ----
     function playPcm(arrayBuffer) {
@@ -57,7 +67,11 @@
 
     // ---- Start / stop ----
     async function start() {
-        startBtn.disabled = true;
+        if (window.MC.chat && window.MC.chat.demo) {
+            setStatus('Voice chat works in the full app (run make run). This demo has no server to talk to.');
+            return;
+        }
+        setActive(true);
         setStatus('Asking for microphone access...');
         try {
             micStream = await navigator.mediaDevices.getUserMedia({
@@ -65,7 +79,7 @@
             });
         } catch (err) {
             setStatus('Microphone unavailable: ' + err.message);
-            startBtn.disabled = false;
+            setActive(false);
             return;
         }
 
@@ -79,7 +93,7 @@
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${proto}//${location.host}/ws/voice`);
         ws.binaryType = 'arraybuffer';
-        setStatus('Connecting to Gemini...');
+        setStatus('Connecting...');
 
         recorder.port.onmessage = e => {
             if (e.data.level !== undefined) level.style.width = Math.min(100, e.data.level * 400) + '%';
@@ -91,8 +105,7 @@
             const msg = JSON.parse(e.data);
             if (msg.type === 'ready') {
                 window.MC.voiceActive = true;
-                setStatus('Listening - go ahead and talk.');
-                stopBtn.disabled = false;
+                setStatus('Listening - go ahead and talk. Press Voice chat again to stop.');
                 // While the camera is on, Gemini Live sees ~1 frame per second to read your expression.
                 frameTimer = setInterval(() => {
                     const frame = window.MC.camera && window.MC.camera.grabFrame(320, 0.7);
@@ -122,8 +135,7 @@
         if (playCtx) playCtx.close();
         micStream = recordCtx = playCtx = null;
         level.style.width = '0';
-        startBtn.disabled = false;
-        stopBtn.disabled = true;
+        setActive(false);
     }
 
     function stop() {
@@ -131,7 +143,11 @@
         cleanup();
     }
 
-    startBtn.addEventListener('click', () => start().catch(err => { setStatus('Voice error: ' + err.message); cleanup(); }));
-    stopBtn.addEventListener('click', stop);
+    toggle.addEventListener('click', () => {
+        if (active) { stop(); setStatus(''); return; }
+        start().catch(err => { setStatus('Voice error: ' + err.message); cleanup(); });
+    });
+    // Leaving the chat tab in the patient app ends the call.
+    window.addEventListener('hashchange', () => { if (active && toggle.offsetParent === null) { stop(); setStatus(''); } });
     window.addEventListener('beforeunload', stop);
 })();

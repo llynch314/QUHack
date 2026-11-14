@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}My Watch - AttuneMIND{% endblock %}
+{% block title %}My Watch - attuneMIND{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/wearable.css') }}">
 
@@ -21,7 +21,7 @@
         <p class="small" id="emCallNote" role="status" hidden></p>
         <button type="button" class="btn ok" id="emOk">I'm OK</button>
         <p class="count" id="emCount" aria-live="assertive"></p>
-        <p class="small">AttuneMind does not call emergency services for you and cannot diagnose a heart attack.</p>
+        <p class="small">attuneMIND does not call emergency services for you and cannot diagnose a heart attack.</p>
     </div>
 </div>
 
@@ -32,7 +32,7 @@
         <li>Your watch sends heart rate, heart-rate variability, resting heart rate, steps, active energy, workouts and fall events.</li>
         <li>They are <strong>encrypted in transit</strong> (HTTPS tunnel) and <strong>encrypted at rest</strong>.</li>
         <li><strong>You</strong> see your vitals. <strong>Family</strong> only get alerts (emergencies, and stress only if you turn it on), never your numbers. <strong>Providers</strong> only get reports, never live alerts.</li>
-        <li>AttuneMind is not a medical device and never diagnoses. In an emergency it tells you to call 911.</li>
+        <li>attuneMIND is not a medical device and never diagnoses. In an emergency it tells you to call 911.</li>
         <li>You can export or delete your wearable data, and revoke a device, at any time.</li>
     </ul>
     <p class="small muted">Consent version {{ consent_version }}</p>
@@ -105,7 +105,7 @@
             <button type="button" class="btn btn-primary" id="devCreate">Create device token</button>
         </div>
         <div id="newToken" class="stack" hidden>
-            <p><strong>Shown once.</strong> Paste this token into the <em>X-Device-Token</em> header of your "AttuneMind Sync" Shortcut (or scan the QR with your iPhone camera).</p>
+            <p><strong>Shown once.</strong> Paste this token into the <em>X-Device-Token</em> header of your "attuneMIND Sync" Shortcut (or scan the QR with your iPhone camera).</p>
             <div class="token" id="tokenText"></div>
             <div class="row"><button type="button" class="btn btn-ghost" id="copyToken">Copy token</button>
                 <button type="button" class="btn btn-ghost" id="copyUrl">Copy ingest URL</button></div>

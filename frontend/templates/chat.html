@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block page_label %}chatbot{% endblock %}
-{% block title %}Chat - AttuneMIND{% endblock %}
+{% block title %}Chat - attuneMIND{% endblock %}
 {% block content %}
 <h1>Talk it through</h1>
 <p class="notice">You're chatting with an AI, not a person or a therapist. Your messages are sent to Anthropic's Claude AI
-    (and, in voice mode, to Google's Gemini AI) to create replies and aren't saved by AttuneMIND. Please leave out names, addresses and other identifying details.
+    (and, in voice mode, to Google's Gemini AI) to create replies and aren't saved by attuneMIND. Please leave out names, addresses and other identifying details.
     <a href="{{ url_for('privacy') }}">Learn more</a></p>
 
 <div id="crisisPanel" class="crisis-panel" role="alert" hidden>
@@ -17,44 +17,20 @@
     </ul>
 </div>
 
-<div class="chat-layout">
-    <section aria-labelledby="chat-heading">
-        <h2 id="chat-heading" class="sr-only">Conversation</h2>
-        <div id="chatLog" class="chat-log" role="log" aria-live="polite" aria-relevant="additions">
-            <div class="bubble model">Hi, I'm here to listen. What's on your mind today?</div>
-        </div>
-        <form id="chatForm" class="chat-form">
-            <label for="chatInput" class="sr-only">Your message</label>
-            <textarea id="chatInput" rows="2" placeholder="Type how you're feeling... (Enter to send, Shift+Enter for a new line)" maxlength="4000" required></textarea>
-            <button type="button" id="dictateBtn" class="btn btn-ghost" title="Dictate with your microphone" aria-label="Dictate a message">🎤</button>
-            <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
-        </form>
-        <p id="chatStatus" class="status" role="status"></p>
-    </section>
-
-    <aside class="side-panel" aria-label="Voice and camera options">
-        <section class="card" aria-labelledby="voice-heading">
-            <h2 id="voice-heading">Talk out loud</h2>
-            <p class="muted">Have a spoken conversation. Headphones work best.</p>
-            <div class="row" style="margin-top:12px">
-                <button type="button" id="voiceStart" class="btn btn-primary">Start talking</button>
-                <button type="button" id="voiceStop" class="btn" disabled>Stop</button>
-            </div>
-            <div class="voice-level" aria-hidden="true" style="margin-top:10px"><span id="voiceLevel"></span></div>
-            <p id="voiceStatus" class="status" role="status"></p>
-        </section>
-
-        <section class="card" aria-labelledby="cam-heading">
-            <h2 id="cam-heading">Expression check (optional)</h2>
-            <p class="muted">If you turn this on, camera snapshots are sent to the AI (Claude in text chat, Gemini while talking out loud) so replies can take your expression
-                into account: every 5 seconds in text chat, and about once a second while you're talking out loud.
-                Nothing is saved, and it never identifies you. It's a rough guess, not a diagnosis.</p>
-            <label class="row"><input type="checkbox" id="camToggle"> Use my camera</label>
-            <video id="webcam" autoplay playsinline muted hidden></video>
-            <p id="camStatus" class="status" role="status"></p>
-        </section>
-    </aside>
-</div>
+<section aria-labelledby="chat-heading">
+    <h2 id="chat-heading" class="sr-only">Conversation</h2>
+    {% include "_chat_toolbar.html" %}
+    <div id="chatLog" class="chat-log" role="log" aria-live="polite" aria-relevant="additions">
+        <div class="bubble model">Hi, I'm here to listen. What's on your mind today?</div>
+    </div>
+    <form id="chatForm" class="chat-form">
+        <label for="chatInput" class="sr-only">Your message</label>
+        <textarea id="chatInput" rows="2" placeholder="Type how you're feeling... (Enter to send, Shift+Enter for a new line)" maxlength="4000" required></textarea>
+        <button type="button" id="dictateBtn" class="btn btn-ghost" title="Type with your voice" aria-label="Type with your voice">🎤</button>
+        <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
+    </form>
+    <p id="chatStatus" class="status" role="status"></p>
+</section>
 {% endblock %}
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>

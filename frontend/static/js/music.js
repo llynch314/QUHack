@@ -12,7 +12,7 @@
 
   var h = React.createElement;
   var useState = React.useState, useEffect = React.useEffect;
-  var PREVIEW = location.protocol === "file:";
+  var PREVIEW = !!window.ATTUNE_DEMO;   // set in test.html: from disk, GitHub Pages, or ?demo
   var QUERIES = {   // same as backend/spotify.py, for previews opened from disk
     Yellow: "happy acoustic morning", Green: "calm acoustic chill", Blue: "comforting gentle piano",
     Red: "calming meditation breathing", Purple: "dreamy ambient focus"

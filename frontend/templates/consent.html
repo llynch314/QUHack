@@ -1,19 +1,19 @@
 {% extends "base.html" %}
 {% block page_label %}welcome{% endblock %}
-{% block title %}Welcome - AttuneMIND{% endblock %}
+{% block title %}Welcome - attuneMIND{% endblock %}
 {% block content %}
 <h1>Welcome{% if current_user.name %}, {{ current_user.name.split(' ')[0] }}{% endif %}</h1>
-<p>Before you start, here's what AttuneMIND is and what it keeps. Please read and choose.</p>
+<p>Before you start, here's what attuneMIND is and what it keeps. Please read and choose.</p>
 
 <form method="post" class="stack" style="max-width:720px">
     {% if error %}<p class="crisis-panel" role="alert">{{ error }}</p>{% endif %}
 
     <section class="card stack" aria-labelledby="terms-h">
-        <h2 id="terms-h">1. What AttuneMIND is (required)</h2>
+        <h2 id="terms-h">1. What attuneMIND is (required)</h2>
         <ul>
-            <li>AttuneMIND is a support tool. It is <strong>not</strong> a therapist, doctor or emergency service, and AI replies can be wrong.</li>
+            <li>attuneMIND is a support tool. It is <strong>not</strong> a therapist, doctor or emergency service, and AI replies can be wrong.</li>
             <li>If you're in danger, call or text <strong>988</strong> (US) or call <strong>911</strong>.</li>
-            <li>Your chats are sent to Anthropic's Claude AI to create replies (voice mode uses Google's Gemini AI). AttuneMIND doesn't save them.</li>
+            <li>Your chats are sent to Anthropic's Claude AI to create replies (voice mode uses Google's Gemini AI). attuneMIND doesn't save them.</li>
             <li>We save your Google name and email, the mood colors you pick on your dashboard, and the check-in ratings you choose to save. You can delete everything at any time.</li>
         </ul>
         <label class="row"><input type="checkbox" name="agree" value="yes" required>

@@ -30,9 +30,9 @@ NUDGES = {
     2: ("You've seemed tense for a while. Are you okay? Let's try 5-4-3-2-1 grounding together.", '/wearable#plan'),
 }
 FAMILY_NOTES = {
-    'distress': 'AttuneMind noticed {name} has seemed very stressed for a while. Consider checking in with them.',
-    'fall': 'AttuneMind detected a possible fall. Please check on {name} now.',
-    'cardiac_warning': 'AttuneMind detected possible warning signs. Please check on {name} now and call 911 if needed.',
+    'distress': 'attuneMIND noticed {name} has seemed very stressed for a while. Consider checking in with them.',
+    'fall': 'attuneMIND detected a possible fall. Please check on {name} now.',
+    'cardiac_warning': 'attuneMIND detected possible warning signs. Please check on {name} now and call 911 if needed.',
 }
 
 
@@ -137,7 +137,7 @@ def push_to_phone(nudge):
         return
     server = os.getenv('NTFY_SERVER', 'https://ntfy.sh').rstrip('/')
     base = (os.getenv('PUBLIC_BASE_URL') or '').rstrip('/')
-    headers = {'Title': 'AttuneMind', 'Priority': 'urgent' if nudge.tier >= 3 else ('high' if nudge.tier == 2 else 'default'),
+    headers = {'Title': 'attuneMIND', 'Priority': 'urgent' if nudge.tier >= 3 else ('high' if nudge.tier == 2 else 'default'),
                'Tags': 'rotating_light' if nudge.tier >= 3 else 'relieved'}
     if base and nudge.link:
         headers['Click'] = base + nudge.link

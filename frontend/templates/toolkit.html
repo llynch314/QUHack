@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block page_label %}calm toolkit{% endblock %}
-{% block title %}Calm Toolkit - AttuneMIND{% endblock %}
+{% block title %}Calm Toolkit - attuneMIND{% endblock %}
 {% macro rating(id, label) -%}
 <div class="rating">
     <label for="{{ id }}">{{ label }} <output id="{{ id }}-out" for="{{ id }}">5</output>/10</label>
@@ -66,20 +66,11 @@
     <!-- Grounding -->
     <section id="grounding" class="card tool stack" data-activity="grounding" aria-labelledby="grounding-h">
         <h2 id="grounding-h">5-4-3-2-1 grounding</h2>
-        <p class="muted">Bring yourself back to the present by noticing what's around you. Typing is optional - you can just notice. Nothing here is saved.</p>
+        <p class="muted">Bring yourself back to the present by noticing what's around you.</p>
         <div class="before stack">
             {{ rating('grounding-before', 'How stressed do you feel right now?') }}
-            <button type="button" class="btn btn-primary" id="groundStart">Begin</button>
         </div>
-        <div id="groundSteps" hidden class="stack">
-            <div class="progress" aria-hidden="true"><span id="groundProgress" style="width:0"></span></div>
-            <h3 id="groundPrompt" tabindex="-1"></h3>
-            <div id="groundInputs" class="stack"></div>
-            <div class="row">
-                <button type="button" class="btn" id="groundBack">Back</button>
-                <button type="button" class="btn btn-primary" id="groundNext">Next</button>
-            </div>
-        </div>
+        <div data-grounding></div>
         {{ checkin_after('grounding') }}
     </section>
 
@@ -144,5 +135,6 @@
 {% endblock %}
 {% block scripts %}
 <script>window.MC_SIGNED_IN = {{ 'true' if current_user else 'false' }};</script>
+<script src="{{ url_for('static', filename='js/grounding.js') }}"></script>
 <script src="{{ url_for('static', filename='js/toolkit.js') }}"></script>
 {% endblock %}

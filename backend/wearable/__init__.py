@@ -1,4 +1,4 @@
-"""AttuneMind wearable integration (PRD §6). Self-contained package; see integrations.py
+"""attuneMIND wearable integration (PRD §6). Self-contained package; see integrations.py
 for the single place that talks to the team's roles / care team / alerts / documents.
 
 Wire-up in app.py (after the blueprints, before db.create_all()):

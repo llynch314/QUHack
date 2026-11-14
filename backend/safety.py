@@ -22,9 +22,9 @@ _COMPILED = {kind: re.compile('|'.join(p), re.IGNORECASE) for kind, p in _PATTER
 
 # What family members see. Never includes what the patient wrote.
 ALERT_NOTES = {
-    'crisis': 'AttuneMIND noticed signs of a crisis. Please check in with them now.',
-    'panic_attack': 'AttuneMIND noticed signs of a panic attack. Please check in with them.',
-    'meltdown': 'AttuneMIND noticed signs of a meltdown. Please check in with them.',
+    'crisis': 'attuneMIND noticed signs of a crisis. Please check in with them now.',
+    'panic_attack': 'attuneMIND noticed signs of a panic attack. Please check in with them.',
+    'meltdown': 'attuneMIND noticed signs of a meltdown. Please check in with them.',
 }
 
 
