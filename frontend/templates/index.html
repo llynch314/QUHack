@@ -1,19 +1,30 @@
 {% extends "base.html" %}
+{% block page_label %}welcome{% endblock %}
 {% block content %}
 <section class="hero" aria-labelledby="hero-title">
     <div>
-        <h1 id="hero-title">Welcome to AttuneMIND</h1>
-        <p>A calm space to talk things through, learn coping skills that last, and see your own progress, at any hour.</p>
+        <p class="lede" style="margin:0">Hello,</p>
+        <h1 id="hero-title" class="page-title" style="font-size:clamp(3rem,9vw,5rem);line-height:1">welcome.</h1>
+        <p class="lede" style="margin-top:1.25rem">A calm space to talk things through, learn coping skills that last,
+            and see your own progress, at any hour.</p>
         <div class="row">
-            <a class="btn btn-primary" href="{{ url_for('chat') }}">Start talking</a>
+            <a class="btn btn-primary" href="{{ url_for('auth.signin') }}">Sign in</a>
+            <a class="btn" href="{{ url_for('chat') }}">Start talking</a>
             <a class="btn" href="{{ url_for('toolkit') }}">I need to calm down now</a>
         </div>
     </div>
-    <img src="{{ url_for('static', filename='img/ai.gif') }}" alt="">
+    <div class="capsule">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="AttuneMIND: space to slow down" width="800" height="579">
+    </div>
 </section>
 
 <h2>What you can do here</h2>
-<div class="grid">
+<div class="grid" style="margin-top:1rem">
+    <article class="card feature">
+        <div class="icon" aria-hidden="true">🎨</div>
+        <h3>Check in with a color</h3>
+        <p>Pick the color that matches how you feel on your dashboard, and watch your moods over time.</p>
+    </article>
     <article class="card feature">
         <div class="icon" aria-hidden="true">💬</div>
         <h3>Talk it through</h3>
@@ -23,21 +34,15 @@
     <article class="card feature">
         <div class="icon" aria-hidden="true">🌬️</div>
         <h3>Calm Toolkit</h3>
-        <p>Guided breathing, 5-4-3-2-1 grounding, a thought record and quick DBT skills. Rate your stress before and after to see what works for you.</p>
+        <p>Guided breathing and 5-4-3-2-1 grounding. Rate your stress before and after to see what works for you.</p>
         <a href="{{ url_for('toolkit') }}">Open the toolkit</a>
     </article>
     <article class="card feature">
-        <div class="icon" aria-hidden="true">📈</div>
-        <h3>Track and share, your way</h3>
-        <p>See how your stress changes over time. You decide if and when to share a report with a therapist, doctor or parent.</p>
-        <a href="{{ url_for('report') }}">See my progress</a>
-    </article>
-    <article class="card feature">
-        <div class="icon" aria-hidden="true">♿</div>
-        <h3>Made for everyone</h3>
-        <p>Use the <strong>Aa</strong> menu for bigger text, a dyslexia-friendly font, high contrast, less motion and read-aloud.</p>
+        <div class="icon" aria-hidden="true">🤝</div>
+        <h3>Your care team, your rules</h3>
+        <p>Add a health provider or family member. Providers see only health documents, family only urgent alerts.</p>
     </article>
 </div>
 
-<p class="notice" style="margin-top:24px">AttuneMIND supports you between appointments. It is not a replacement for a therapist or doctor, and it can't respond to emergencies.</p>
+<p class="notice" style="margin-top:2rem">AttuneMIND supports you between appointments. It is not a replacement for a therapist or doctor, and it can't respond to emergencies.</p>
 {% endblock %}

@@ -29,7 +29,7 @@ ACCESS = {
 }
 
 # Where each role lands after signing in.
-HOME = {'patient': 'index', 'provider': 'care.provider_home', 'family': 'care.family_home'}
+HOME = {'patient': 'test_dashboard', 'provider': 'care.provider_home', 'family': 'care.family_home'}
 
 bp = Blueprint('auth', __name__)
 oauth = OAuth()
@@ -146,12 +146,21 @@ def _sign_in(user, next_url):
     return redirect(_safe_next(next_url))
 
 
+def apply_verified_organization(user):
+    """A provider at a verified domain always shows that organisation; they can't claim another."""
+    org = user.verified_organization
+    if org and user.organization != org:
+        user.organization = org
+        db.session.commit()
+
+
 def _finish_sign_in(user, wanted_role, next_url):
     """Sign in if the account's role matches the door used; otherwise explain which door to use."""
     if user.role != wanted_role:
         flash(f'This Google account is registered as a {ROLE_LABELS[user.role].lower()}. '
               f'Please use the {ROLE_LABELS[user.role].lower()} sign-in.')
         return redirect(url_for('auth.signin'))
+    apply_verified_organization(user)
     # _sign_in sends new accounts to the consent screen first, then on to this page.
     return _sign_in(user, next_url if next_url and next_url != url_for('index') else home_url(user))
 
@@ -196,6 +205,7 @@ def google_callback():
         user = User(google_sub=info['sub'], role=role)   # first sign-in picks the role
         db.session.add(user)
     user.email = info.get('email')
+    user.email_verified = bool(info.get('email_verified'))
     user.name = info.get('name') or info.get('given_name')
     db.session.commit()
     return _finish_sign_in(user, role, _safe_next(next_url))
@@ -211,8 +221,10 @@ def dev_login():
     sub = f'dev-demo-{role}'
     user = User.query.filter_by(google_sub=sub).first()
     if user is None:
+        # The demo provider works at a hospital on the verified list, so the badge shows.
+        domain = 'cityhospital.example' if role == 'provider' else 'example.com'
         user = User(google_sub=sub, role=role, name=f'Demo {ROLE_LABELS[role]}',
-                    email=f'demo-{role}@example.com')
+                    email=f'demo-{role}@{domain}', email_verified=True)
         db.session.add(user)
         db.session.commit()
     return _finish_sign_in(user, role, _safe_next(next_url))
@@ -248,12 +260,16 @@ PROFILE_FIELDS = {'organization': 200, 'specialty': 120, 'license_number': 60}  
 @login_required
 def account():
     """Account details for every role: provider profile (providers only) and account deletion."""
+    if g.user.role == 'patient' and request.method == 'GET':
+        return redirect(url_for('test_dashboard') + '#settings')   # patients use the app's Settings tab
     error = None
     next_url = request.args.get('next')
     if request.method == 'POST':
         if g.user.role != 'provider':
             abort(403)
         values = {f: (request.form.get(f) or '').strip()[:n] or None for f, n in PROFILE_FIELDS.items()}
+        if g.user.verified_organization:     # locked to the organisation their email proves
+            values['organization'] = g.user.verified_organization
         if not values['organization']:
             error = 'Please add the hospital, clinic or practice you work at.'
         else:

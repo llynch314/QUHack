@@ -24,7 +24,7 @@ CHECK_KEY := $(VENV_PY) -c "import sys; from dotenv import dotenv_values; k = (d
 help:
 	@echo Commands:
 	@echo   make setup          Create the venv, install dependencies and create backend/.env
-	@echo   make run            Start the Flask web app at http://127.0.0.1:5000
+	@echo   make run            Start the web app, then open the dashboard at http://127.0.0.1:5000/dashboard
 	@echo   make chat           Chat with the Claude bot in the terminal
 	@echo   make webcam         Webcam emotion detection demo, press q to quit
 	@echo   make expressions    Show the latest saved expression readings from the database

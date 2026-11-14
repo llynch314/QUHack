@@ -24,6 +24,7 @@ AI-powered mental well-being companion (healthcare hackathon project).
 | `backend/voice.py` | Websocket relay between the browser and Gemini Live |
 | `backend/auth.py` | Sign in with Google, the three sign-in doors, and the access rules (`ACCESS`) |
 | `backend/care.py` | Care team, health documents and alerts (pages + API) |
+| `backend/sms.py` | Text-message alerts to family members (Twilio) |
 | `backend/safety.py` | Spots panic attack / meltdown / crisis language for family alerts |
 | `backend/tests/` | Tests for who can see what (`pytest`) |
 | `backend/models.py` | Database tables |
@@ -83,6 +84,12 @@ Emotion detection sends the image to Claude, so it uses the same `ANTHROPIC_API_
 3. Put the client ID and secret in `backend/.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and set `FLASK_SECRET_KEY` to a long random string.
 4. Open the app at `http://127.0.0.1:5000` (not `localhost`), so the redirect URI matches.
 
+## Text-message alerts
+
+Family members can turn on text alerts from their Alerts page: they enter a mobile number, confirm it with a 6-digit code, and then get a text for every new alert (SOS button or signs of crisis, panic attack or meltdown in chat). Texts only say who needs support and the kind of alert, never chat text or notes.
+
+To send real texts, create a [Twilio](https://console.twilio.com) account, buy or use a trial phone number, and set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM_NUMBER` in `backend/.env`. On a trial account you can only text numbers you've verified in the Twilio console. Without these settings the app runs in demo mode: codes and alert texts are printed in the `make run` terminal instead of being sent.
+
 ## Privacy and safety notes
 
 - This is a prototype and is **not HIPAA-compliant**. A production version would need a business associate agreement (BAA) with every vendor that touches health data, including the AI provider, plus encryption, access controls and audit logs.
@@ -106,9 +113,13 @@ The sign-in page (`/signin`) has three doors. A Google account gets its type the
 - **Alerts**: the patient's alert buttons ("I'm having a panic attack" etc.), or automatically when a signed-in patient's chat shows signs of a panic attack, meltdown or crisis. Family see only the type of alert, never the chat text. Patients can turn automatic alerts off. The same kind of chat alert isn't repeated within 10 minutes. Voice mode doesn't create alerts yet.
 - The family page checks for new alerts every 20 seconds. There are no push notifications or texts yet.
 - All rules live in `ACCESS` in `backend/auth.py`; every route that touches a patient's data calls `require_access()`.
+- **Provider profile**: providers add their hospital, clinic or practice (required), specialty and optional licence/NPI number on **My account**. Patients see it on their Care Team page.
+- **Verified providers**: a provider whose Google-verified email is at a domain in `backend/data/verified_organizations.csv` (or a subdomain of it) gets that organisation automatically, can't change it, and shows as **✓ Verified** to patients. Everyone else shows as unverified (self-reported). Add a row per partner hospital (`name,domain`). The demo list uses reserved `.example` domains, and the demo provider (`demo-provider@cityhospital.example`) is verified.
+- **My account** (`/account`, every account type): profile and account deletion.
 
 | Page | Who |
 |---|---|
+| `/account` | Everyone: account details, provider profile, delete account |
 | `/care-team` | Patient: alert buttons, care team, documents, alert history |
 | `/provider` and `/provider/patients/<id>` | Provider: their patients and each patient's documents |
 | `/family` | Family: alerts, with an "I'm checking in" button |

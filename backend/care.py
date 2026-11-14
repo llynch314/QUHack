@@ -2,14 +2,18 @@
 
   Patient  : manages their care team, documents and alerts (Care Team page)
   Provider : sees and adds health documents for patients who added them (My Patients page)
-  Family   : sees and acknowledges urgent alerts for patients who added them (Alerts page)
+  Family   : sees and acknowledges urgent alerts for patients who added them (Alerts page),
+             and can get them by text message too (see sms.py)
 """
 from datetime import timedelta
 
-from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
+from flask import (Blueprint, abort, current_app, flash, g, jsonify, redirect, render_template, request,
+                   url_for)
 
 from auth import require_access, roles_required
-from models import (ALERT_KINDS, Alert, CareLink, HealthDocument, User, _now, db)
+import sms
+from models import (ALERT_KINDS, ALERT_LABELS, Alert, CareLink, HealthDocument, PhoneVerification, User,
+                    _now, as_utc, db)
 from safety import ALERT_NOTES
 
 bp = Blueprint('care', __name__)
@@ -45,7 +49,21 @@ def create_alert(patient, kind, source, note=''):
     alert = Alert(patient_id=patient.id, kind=kind, source=source, note=(note or '')[:500])
     db.session.add(alert)
     db.session.commit()
+    text_family(alert)
     return alert
+
+
+def text_family(alert):
+    """Text every linked family member who confirmed a phone number and kept text alerts on."""
+    family = (User.query.join(CareLink, CareLink.member_id == User.id)
+              .filter(CareLink.patient_id == alert.patient_id, User.role == 'family',
+                      User.phone.isnot(None), User.sms_alerts.is_(True)).all())
+    if not family:
+        return 0
+    body = sms.alert_text(alert.patient.display_name, ALERT_LABELS.get(alert.kind, alert.kind),
+                          url_for('care.family_home', _external=True))
+    sms.dispatch([(member.phone, body) for member in family])
+    return len(family)
 
 
 def alert_from_chat(patient, kind):
@@ -65,11 +83,8 @@ def alert_from_chat(patient, kind):
 @bp.route('/care-team')
 @roles_required('patient')
 def care_team_page():
-    docs = (HealthDocument.query.filter_by(patient_id=g.user.id)
-            .order_by(HealthDocument.created_at.desc()).all())
-    alerts = (Alert.query.filter_by(patient_id=g.user.id)
-              .order_by(Alert.created_at.desc()).limit(20).all())
-    return render_template('care_team.html', links=_links_for(g.user), docs=docs, alerts=alerts)
+    """Old Care Team page; now the Care Team tab of the patient app (frontend/test.html)."""
+    return redirect(url_for('test_dashboard') + '#care-team')
 
 
 @bp.route('/provider')
@@ -140,8 +155,102 @@ def api_settings():
     data = _json()
     if 'auto_alerts' in data:
         g.user.auto_alerts = bool(data['auto_alerts'])
+    if 'save_expressions' in data:            # opt-in to saving camera expression readings
+        g.user.save_expressions = bool(data['save_expressions'])
+        g.user.expressions_consent_at = _now()
     db.session.commit()
-    return jsonify(auto_alerts=g.user.auto_alerts)
+    return jsonify(auto_alerts=g.user.auto_alerts, save_expressions=g.user.save_expressions)
+
+
+# ---------- Text-message alerts (family) ----------
+
+def _phone_state(user):
+    return {'phone': user.phone_masked, 'sms_alerts': user.sms_alerts, 'demo_mode': not sms.twilio_configured()}
+
+
+@bp.get('/api/me/phone')
+@roles_required('family')
+def api_phone():
+    return jsonify(_phone_state(g.user))
+
+
+@bp.post('/api/me/phone')
+@roles_required('family')
+def api_phone_start():
+    """Step 1: text a 6-digit code to the number."""
+    phone = sms.normalize_phone(_json().get('phone'))
+    if phone is None:
+        abort(400, 'Please enter a full phone number, like 555-123-4567 (or +44 ... outside the US).')
+    pending = PhoneVerification.query.filter_by(user_id=g.user.id).first()
+    if pending and as_utc(pending.created_at) > _now() - sms.RESEND_WAIT:
+        abort(429, 'A code was just sent. Please wait a minute before asking for another.')
+    code, code_hash = sms.new_code()
+    try:
+        sms.send_sms(phone, f'Your AttuneMIND code is {code}. It expires in 10 minutes. '
+                            f"If you didn't ask for this, you can ignore it.")
+    except Exception:
+        current_app.logger.exception('Could not send verification code')
+        abort(502, "We couldn't text that number. Please check it and try again.")
+    if pending:
+        db.session.delete(pending)
+        db.session.flush()
+    db.session.add(PhoneVerification(user_id=g.user.id, phone=phone, code_hash=code_hash,
+                                     expires_at=_now() + sms.CODE_TTL))
+    db.session.commit()
+    return jsonify(sent=True, demo_mode=not sms.twilio_configured())
+
+
+@bp.post('/api/me/phone/verify')
+@roles_required('family')
+def api_phone_verify():
+    """Step 2: check the code; the number is saved only if it matches."""
+    pending = PhoneVerification.query.filter_by(user_id=g.user.id).first()
+    if pending is None or as_utc(pending.expires_at) < _now():
+        abort(400, 'That code has expired. Please ask for a new one.')
+    if pending.attempts >= sms.MAX_ATTEMPTS:
+        abort(429, 'Too many wrong codes. Please ask for a new one.')
+    if not sms.code_matches(pending.code_hash, _json().get('code')):
+        pending.attempts += 1
+        db.session.commit()
+        abort(400, "That code doesn't match. Please check the text and try again.")
+    g.user.phone = pending.phone
+    g.user.sms_alerts = True
+    db.session.delete(pending)
+    db.session.commit()
+    return jsonify(_phone_state(g.user))
+
+
+@bp.patch('/api/me/phone')
+@roles_required('family')
+def api_phone_settings():
+    data = _json()
+    if 'sms_alerts' in data:
+        g.user.sms_alerts = bool(data['sms_alerts'])
+    db.session.commit()
+    return jsonify(_phone_state(g.user))
+
+
+@bp.delete('/api/me/phone')
+@roles_required('family')
+def api_phone_remove():
+    g.user.phone = None
+    PhoneVerification.query.filter_by(user_id=g.user.id).delete()
+    db.session.commit()
+    return jsonify(_phone_state(g.user))
+
+
+@bp.post('/api/me/phone/test')
+@roles_required('family')
+def api_phone_test():
+    if not g.user.phone:
+        abort(400, 'Add and confirm a phone number first.')
+    try:
+        sms.send_sms(g.user.phone, 'AttuneMIND test: text alerts are working. You will get a text like '
+                                   'this if someone who added you to their care team needs support.')
+    except Exception:
+        current_app.logger.exception('Could not send test text')
+        abort(502, "We couldn't send the test text. Please try again later.")
+    return jsonify(sent=True, demo_mode=not sms.twilio_configured())
 
 
 # ---------- Health documents API (patient + linked providers) ----------

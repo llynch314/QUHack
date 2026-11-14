@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block page_label %}patient{% endblock %}
 {% block title %}{{ patient.display_name }} - AttuneMIND{% endblock %}
 {% block content %}
 <p><a href="{{ url_for('care.provider_home') }}">← My patients</a></p>

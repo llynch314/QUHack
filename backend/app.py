@@ -7,14 +7,10 @@ import secrets
 from datetime import timedelta
 
 from dotenv import load_dotenv
-<<<<<<< HEAD
-from flask import (
-    Flask, g, jsonify, render_template, request, send_from_directory, session,
-)
-=======
-from flask import Flask, g, jsonify, render_template, request, session
 import anthropic
->>>>>>> df38e44cf0e8ead19d8d57129474b64c9d301cfa
+from flask import (
+    Flask, g, jsonify, redirect, render_template, request, send_from_directory, session, url_for,
+)
 
 load_dotenv()
 
@@ -22,8 +18,10 @@ from auth import bp as auth_bp, init_auth, login_required, roles_required  # noq
 from care import alert_from_chat, bp as care_bp  # noqa: E402
 from claude_chat import chat_reply  # noqa: E402
 from claude_emotion import NoFaceDetected, detect_emotion  # noqa: E402
-from models import CheckIn, ExpressionReading, add_missing_columns, as_utc, db, delete_user_everywhere  # noqa: E402
+from models import (MOOD_COLORS, MOOD_MEANINGS, CheckIn, ExpressionReading, MoodEntry, _now,  # noqa: E402
+                    add_missing_columns, as_utc, db, delete_user_everywhere)
 from safety import detect_urgent  # noqa: E402
+import spotify  # noqa: E402
 from voice import sock  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +70,9 @@ EXPRESSION_LOG = os.path.join(app.instance_path, 'expression_log.csv')
 
 @app.route('/')
 def index():
+    # Signed-in patients go straight to their dashboard; everyone else sees the welcome page.
+    if g.get('user') and g.user.role == 'patient':
+        return redirect(url_for('test_dashboard'))
     return render_template('index.html')
 
 
@@ -88,21 +89,8 @@ def toolkit():
 @app.route('/report')
 @roles_required('patient')
 def report():
-    checkins = g.user.checkins
-    rated = [c for c in checkins if c.stress_before is not None and c.stress_after is not None]
-    avg_change = (sum(c.stress_after - c.stress_before for c in rated) / len(rated)) if rated else None
-    diffs = {}
-    for c in rated:
-        diffs.setdefault(c.activity, []).append(c.stress_after - c.stress_before)
-    # [(activity, average change, count)], biggest drop in stress first
-    by_activity = sorted(((a, sum(d) / len(d), len(d)) for a, d in diffs.items()), key=lambda t: t[1])
-    readings = g.user.expressions
-    expression_counts = {}
-    for r in readings:
-        expression_counts[r.emotion] = expression_counts.get(r.emotion, 0) + 1
-    return render_template('report.html', checkins=checkins, avg_change=avg_change, by_activity=by_activity,
-                           readings=readings[-50:], expression_counts=sorted(expression_counts.items(), key=lambda t: -t[1]),
-                           total_readings=len(readings))
+    """Old My Progress page; now the Mood history tab of the patient app."""
+    return redirect(url_for('test_dashboard') + '#mood-history')
 
 
 @app.route('/privacy')
@@ -111,9 +99,21 @@ def privacy():
 
 
 @app.route('/test')
-@login_required
+@roles_required('patient')
 def test_dashboard():
+    """The patient dashboard (frontend/test.html): name, quote and mood color picker."""
     return send_from_directory(FRONTEND_DIR, 'test.html')
+
+
+@app.route('/test.js')
+def test_dashboard_js():
+    """Script for the dashboard (frontend/test.js)."""
+    return send_from_directory(FRONTEND_DIR, 'test.js', mimetype='text/javascript')
+
+
+@app.route('/dashboard')
+def dashboard():
+    return redirect(url_for('test_dashboard'))
 
 
 # ---------- JSON API ----------
@@ -122,19 +122,63 @@ def _error(message, status):
     return jsonify(error=message), status
 
 
-<<<<<<< HEAD
 @app.get('/api/me')
 @login_required
 def api_me():
-    return jsonify(name=g.user.name or 'there')
-=======
+    """The signed-in user, for the dashboard greeting and menu."""
+    u = g.user
+    latest = u.moods[-1].to_dict() if u.role == 'patient' and u.moods else None
+    return jsonify(id=u.id, name=u.name or 'there', first_name=(u.name or '').split(' ')[0] or 'there',
+                   email=u.email, role=u.role, role_label=u.role_label, mood=latest,
+                   auto_alerts=u.auto_alerts, save_expressions=u.save_expressions)
+
+
+@app.get('/api/music')
+@login_required
+def api_music():
+    """Calm Spotify playlists for a mood color (?mood=Blue). Used by the React music card."""
+    mood = request.args.get('mood', 'Green')
+    if mood not in MOOD_COLORS:
+        return _error('Unknown mood color.', 400)
+    result = {'mood': mood, 'query': spotify.MOOD_QUERIES[mood], 'search_url': spotify.search_url(mood),
+              'configured': spotify.configured(), 'playlists': []}
+    if result['configured']:
+        try:
+            result['playlists'] = spotify.playlists_for(mood)
+        except RuntimeError as e:
+            result['error'] = str(e)
+    return jsonify(result)
+
+
+MOOD_MERGE_WINDOW = timedelta(minutes=2)   # picks closer together than this update the last one
+
+
+@app.route('/api/moods', methods=['GET', 'POST'])
+@roles_required('patient')
+def api_moods():
+    """GET: the patient's mood history, newest last. POST {color}: save a dashboard mood pick."""
+    if request.method == 'GET':
+        return jsonify(moods=[m.to_dict() for m in g.user.moods])
+    color = (request.get_json(silent=True) or {}).get('color')
+    if color not in MOOD_COLORS:
+        return _error('Pick one of: ' + ', '.join(MOOD_COLORS) + '.', 400)
+    last = g.user.moods[-1] if g.user.moods else None
+    if last and as_utc(last.created_at) >= _now() - MOOD_MERGE_WINDOW:
+        last.color, last.created_at, status = color, _now(), 200
+        entry = last
+    else:
+        entry, status = MoodEntry(user_id=g.user.id, color=color), 201
+        db.session.add(entry)
+    db.session.commit()
+    return jsonify(mood=entry.to_dict()), status
+
+
 QUOTA_MESSAGE = 'The AI usage limit has been reached for now. Please try again later.'
 
 
 def _is_quota_error(exc):
     """True when Claude rejected the call because of rate limits or quota (HTTP 429)."""
     return isinstance(exc, anthropic.RateLimitError)
->>>>>>> df38e44cf0e8ead19d8d57129474b64c9d301cfa
 
 
 @app.post('/api/chat')
@@ -281,4 +325,6 @@ def api_delete_me():
 
 
 if __name__ == '__main__':
+    if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':   # print once, not again on each auto-reload
+        print('\n  AttuneMIND is running. Open the dashboard: http://127.0.0.1:5000/dashboard\n', flush=True)
     app.run(debug=True)

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block page_label %}privacy{% endblock %}
 {% block title %}Privacy & disclosures - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Privacy &amp; disclosures</h1>
@@ -12,12 +13,12 @@
     <section class="card">
         <h2>What we store</h2>
         <ul>
-            <li><strong>If you sign in with Google:</strong> your name, email and Google account ID, your account type, the check-in ratings you
-                choose to save, your care team, health documents and alerts.</li>
+            <li><strong>If you sign in with Google:</strong> your name, email and Google account ID, your account type, the mood colors you pick
+                on your dashboard, the check-in ratings you choose to save, your care team, health documents and alerts.</li>
             <li><strong>Chats, voice and camera:</strong> not stored by AttuneMIND. Your conversation is kept only in your
                 browser tab and disappears when you close it.</li>
             <li><strong>Accessibility settings:</strong> saved only in your browser.</li>
-            <li>You can delete your account and all of this data at any time from <a href="{{ url_for('auth.account') }}">My account</a> (click your account type at the top of any page).</li>
+            <li>You can delete your account and all of this data at any time from <a href="{{ url_for('auth.account') }}">My account</a> (Settings, in the menu at the top of every page).</li>
         </ul>
     </section>
     <section class="card">
@@ -26,6 +27,12 @@
             Claude API. In voice mode, your voice audio and camera snapshots are sent to Google's Gemini API instead.
             Depending on the plan the app uses, the provider may keep and use this content to improve its products, so please
             don't include names, addresses, dates of birth or medical record numbers.</p>
+    </section>
+    <section class="card">
+        <h2>Text-message alerts</h2>
+        <p>Family members can choose to get alerts by text. Their phone number is saved only after they confirm it with a
+            code, and they can remove it at any time. Texts are sent through Twilio and only say who needs support and the
+            kind of alert (for example "Panic attack"), never chat text or notes.</p>
     </section>
     <section class="card">
         <h2>Sharing with your care team</h2>

@@ -4,69 +4,35 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>attunemind</title>
+<!-- Paths are relative so this page works from the app (make run, /test) and opened straight from disk. -->
+<link rel="icon" type="image/png" href="static/img/favicon.png">
+<link rel="apple-touch-icon" href="static/img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/css/attune.css">
+<script>
+  // Saved accessibility settings (text size, colors...) from the other pages
+  try { var s = JSON.parse(localStorage.getItem('mc-a11y') || '{}');
+        for (var k in s) document.documentElement.dataset[k] = s[k]; } catch (e) {}
+</script>
 <style>
-:root{
-  --bg:#F6EDCF; --header:#A9B99B; --ink:#2A3626; --ink-soft:#52604B;
-  --surface:#FCF8E8; --line:#D6CBA6;
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
-  color-scheme:light;
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#1E211B; --header:#4B5A45; --ink:#EEE9DC; --ink-soft:#BCC4B2;
-    --surface:#2A2E25; --line:#475040; color-scheme:dark;
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#1E211B; --header:#4B5A45; --ink:#EEE9DC; --ink-soft:#BCC4B2;
-  --surface:#2A2E25; --line:#475040; color-scheme:dark;
-}
-*,*::before,*::after{box-sizing:inherit}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{
-  margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
-  font-family:"Outfit",sans-serif;
-  display:flex; flex-direction:column;
-}
-.bar{
-  position:relative; display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
-  background:var(--header); padding:.9rem 1.25rem;
-}
-.brand{font-weight:600; font-size:1.35rem; letter-spacing:.01em; margin:0; text-align:center}
-.page-label{justify-self:end; font-style:italic; font-weight:500; font-size:1.05rem}
-.menu-btn{
-  justify-self:start; width:44px; height:44px; display:grid; place-content:center; gap:5px;
-  background:none; border:0; border-radius:10px; cursor:pointer; color:inherit;
-}
-.menu-btn span{display:block; width:24px; height:2.5px; background:var(--ink); border-radius:2px}
-.menu-btn:hover{background:rgba(255,255,255,.2)}
-:focus-visible{outline:3px solid var(--ink); outline-offset:2px}
-.menu{
-  position:absolute; top:calc(100% - .35rem); left:1.25rem; z-index:5; min-width:200px;
-  margin:0; padding:.4rem; list-style:none; background:var(--surface);
-  border:1.5px solid var(--line); border-radius:14px;
-}
-.menu[hidden]{display:none}
-.menu a{display:block; padding:.7rem .9rem; border-radius:9px; color:var(--ink); text-decoration:none; font-weight:500}
-.menu a:hover{background:var(--bg)}
-main{
-  flex:1; width:100%; max-width:1000px; margin:0 auto; padding:3rem 1.5rem 3.5rem;
-  display:grid; grid-template-columns:1fr minmax(240px,300px); gap:3rem; align-items:stretch;
-}
+:root{ padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px) }
+.view[hidden]{display:none}
+.preview-banner{background:var(--teal); color:#1E2E2F; text-align:center; padding:.5rem 1rem; font-size:.95rem}
+.preview-banner a{color:inherit; font-weight:600}
+
+/* ---- Dashboard (original design) ---- */
+.dashboard{display:grid; grid-template-columns:1fr minmax(240px,300px); gap:3rem; align-items:stretch}
 .left{display:flex; flex-direction:column; justify-content:space-between; gap:3rem}
 .hello{margin:0; font-weight:400; font-size:1.5rem; color:var(--ink-soft)}
 .name{margin:.1em 0 0; font-weight:600; font-size:clamp(3rem,9vw,5.5rem); line-height:1; letter-spacing:-.01em}
 blockquote{
   margin:0; max-width:30ch; padding:.2rem 0 .2rem 1.25rem;
-  border-left:3px solid var(--header);
-  font-size:1.2rem; line-height:1.55;
+  border-left:3px solid var(--header); font-size:1.2rem; line-height:1.55;
 }
 .right{display:flex; flex-direction:column; align-items:center; gap:1.25rem}
-.capsule{
+.mood-capsule{
   width:100%; max-width:300px; min-height:440px; flex:1;
   display:flex; flex-direction:column; overflow:hidden;
   border:2px solid var(--ink); border-radius:150px; background:var(--surface);
@@ -82,119 +48,232 @@ blockquote{
 }
 .picker{display:flex; gap:.6rem}
 .dot{
-  width:36px; height:36px; border-radius:50%; background:var(--c); cursor:pointer;
+  width:36px; height:36px; min-height:0; padding:0; border-radius:50%; background:var(--c); cursor:pointer;
   border:2px solid transparent; box-shadow:0 0 0 2px var(--bg);
 }
+.dot:hover{background:var(--c)}
 .dot[aria-pressed="true"]{border-color:var(--ink); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--ink-soft)}
 .hint{margin:0; font-size:.9rem; color:var(--ink-soft)}
 @media (max-width:720px){
-  main{grid-template-columns:1fr; padding-top:2rem}
+  .dashboard{grid-template-columns:1fr}
   .left{gap:2rem}
-  .capsule{min-height:400px}
+  .mood-capsule{min-height:400px}
 }
 @media (prefers-reduced-motion:reduce){.fill{transition:none}}
+
+/* ---- Other tabs ---- */
+.mood-row{display:flex; gap:.8rem; align-items:center}
+.bars{display:flex; gap:.5rem; align-items:flex-end; height:120px; margin-top:.5rem}
+.bars div{flex:1; display:flex; flex-direction:column; align-items:center; gap:.3rem; font-size:.85rem}
+.bars span.bar-fill{width:100%; max-width:44px; background:var(--c); border:1.5px solid var(--ink); border-radius:12px 12px 4px 4px; min-height:4px}
+.sos-row .btn{flex:1 1 200px}
+.music-mount{margin-top:2.5rem}
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
+<div class="preview-banner" id="previewBanner" hidden>
+  Preview with sample data. To sign in and save, run <strong>make run</strong> and open
+  <a href="http://127.0.0.1:5000/dashboard">127.0.0.1:5000/dashboard</a>.
+</div>
+
 <header class="bar">
-  <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+  <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
     <span></span><span></span><span></span>
   </button>
-  <p class="brand">attune<strong>mind</strong></p>
-  <span class="page-label">dashboard</span>
+  <a class="brand" href="#dashboard"><img class="brand-mark" src="static/img/logo-mark.png" alt="" width="256" height="281"><span>attune<strong>mind</strong></span></a>
+  <div class="bar-right"><span class="page-label" id="pageLabel">dashboard</span></div>
   <ul class="menu" id="menu" hidden>
-    <li><a href="/test">Dashboard</a></li>
-    <li><a href="/report">Mood history</a></li>
-    <li><a href="/account">Settings</a></li>
-    <li><a href="/chat">Chatbot</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#mood-history">Mood history</a></li>
+    <li><a href="#chatbot">Chatbot</a></li>
+    <li><a href="#toolkit">Calm Toolkit</a></li>
+    <li><a href="#care-team">Care Team</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><form method="post" action="/logout"><button type="submit">Sign out</button></form></li>
   </ul>
 </header>
 
-<main>
-  <section class="left" aria-label="Welcome">
-    <div>
-      <p class="hello">Hello,</p>
-      <h1 class="name" id="userName">Loading...</h1>
-    </div>
-    <blockquote id="inspirationalQuote"></blockquote>
-  </section>
+<main id="main" tabindex="-1">
 
-  <section class="right" aria-label="Your mood color">
-    <div class="capsule" id="capsule" style="--mood:#8FB08A">
-      <div class="fill" id="moodName">Green</div>
-      <p class="meaning" id="moodMeaning" aria-live="polite">Green means you feel calm and steady. Everything feels okay.</p>
+  <!-- ===== Dashboard ===== -->
+  <div class="view" id="view-dashboard" data-label="dashboard">
+    <div class="dashboard">
+      <section class="left" aria-label="Welcome">
+        <div>
+          <p class="hello">Hello,</p>
+          <h1 class="name" id="userName">Loading...</h1>
+        </div>
+        <blockquote id="inspirationalQuote"></blockquote>
+      </section>
+
+      <section class="right" aria-label="Your mood color">
+        <div class="mood-capsule" id="capsule" style="--mood:#8FB08A">
+          <div class="fill" id="moodName">Green</div>
+          <p class="meaning" id="moodMeaning" aria-live="polite">Green means you feel calm and steady. Everything feels okay.</p>
+        </div>
+        <div class="picker" role="group" aria-label="Pick your mood color">
+          <button class="dot" type="button" style="--c:#E8C24A" data-name="Yellow" data-color="#E8C24A" aria-pressed="false" aria-label="Yellow"></button>
+          <button class="dot" type="button" style="--c:#8FB08A" data-name="Green" data-color="#8FB08A" aria-pressed="true" aria-label="Green"></button>
+          <button class="dot" type="button" style="--c:#7F9FC4" data-name="Blue" data-color="#7F9FC4" aria-pressed="false" aria-label="Blue"></button>
+          <button class="dot" type="button" style="--c:#D4705F" data-name="Red" data-color="#D4705F" aria-pressed="false" aria-label="Red"></button>
+          <button class="dot" type="button" style="--c:#A58BC0" data-name="Purple" data-color="#A58BC0" aria-pressed="false" aria-label="Purple"></button>
+        </div>
+        <p class="hint" id="moodHint">Tap a color to match how you feel.</p>
+      </section>
     </div>
-    <div class="picker" role="group" aria-label="Pick your mood color">
-      <button class="dot" style="--c:#E8C24A" data-name="Yellow" data-color="#E8C24A" aria-pressed="false" aria-label="Yellow"></button>
-      <button class="dot" style="--c:#8FB08A" data-name="Green" data-color="#8FB08A" aria-pressed="true" aria-label="Green"></button>
-      <button class="dot" style="--c:#7F9FC4" data-name="Blue" data-color="#7F9FC4" aria-pressed="false" aria-label="Blue"></button>
-      <button class="dot" style="--c:#D4705F" data-name="Red" data-color="#D4705F" aria-pressed="false" aria-label="Red"></button>
-      <button class="dot" style="--c:#A58BC0" data-name="Purple" data-color="#A58BC0" aria-pressed="false" aria-label="Purple"></button>
+    <!-- Calm music for the picked mood: a React component (static/js/music.js) -->
+    <div class="music-mount" id="musicRoot"></div>
+  </div>
+
+  <!-- ===== Mood history ===== -->
+  <div class="view" id="view-mood-history" data-label="mood history" hidden>
+    <h1 class="page-title">Mood history</h1>
+    <p class="lede">The colors you've picked, and how the Calm Toolkit has helped. Only you can see this.</p>
+    <section class="card stack" aria-labelledby="moodSumH">
+      <h2 id="moodSumH">Your colors</h2>
+      <div class="bars" id="moodBars" aria-hidden="true"></div>
+      <p id="moodSummary" class="muted"></p>
+    </section>
+    <section class="card stack" aria-labelledby="moodListH">
+      <h2 id="moodListH">Recent moods</h2>
+      <ul class="list" id="moodList"></ul>
+    </section>
+    <section class="card stack" aria-labelledby="checkH">
+      <h2 id="checkH">Calm Toolkit check-ins</h2>
+      <p id="checkSummary" class="muted"></p>
+      <div style="overflow-x:auto"><table><caption class="sr-only">Check-ins</caption>
+        <thead><tr><th scope="col">Date</th><th scope="col">Activity</th><th scope="col">Stress before</th><th scope="col">After</th></tr></thead>
+        <tbody id="checkRows"></tbody></table></div>
+      <div class="row"><button type="button" class="btn" id="shareProgress">Share my progress with my care team</button></div>
+      <p id="shareStatus" class="status" role="status"></p>
+    </section>
+  </div>
+
+  <!-- ===== Chatbot ===== -->
+  <div class="view" id="view-chatbot" data-label="chatbot" hidden>
+    <h1 class="page-title">Chatbot</h1>
+    <p class="lede">Talk things through. It's not a therapist, and replies can be wrong. Chats aren't saved.</p>
+    <div class="chat-log" id="chatLog" aria-live="polite" aria-label="Conversation">
+      <div class="bubble model">Hi, I'm here to listen. What's on your mind today?</div>
     </div>
-    <p class="hint">Tap a color to match how you feel.</p>
-  </section>
+    <form class="chat-form" id="chatForm">
+      <label for="chatInput" class="sr-only">Your message</label>
+      <textarea id="chatInput" rows="2" placeholder="Type how you're feeling..." required></textarea>
+      <button type="submit" class="btn btn-primary" id="chatSend">Send</button>
+    </form>
+    <div class="row" style="margin-top:.75rem">
+      <label class="check"><input type="checkbox" id="chatSpeak"> Read replies aloud</label>
+      <a href="/chat" class="muted">Voice and camera chat</a>
+    </div>
+    <section class="crisis-panel" id="crisisPanel" hidden style="margin-top:1rem">
+      <h2>You don't have to go through this alone</h2>
+      <p>Call or text <a href="tel:988">988</a> (US Suicide &amp; Crisis Lifeline), text HOME to <a href="sms:741741">741741</a>,
+        or call <a href="tel:911">911</a> if you're in danger right now.</p>
+    </section>
+  </div>
+
+  <!-- ===== Calm Toolkit ===== -->
+  <div class="view" id="view-toolkit" data-label="calm toolkit" hidden>
+    <h1 class="page-title">Calm Toolkit</h1>
+    <p class="lede">Short exercises to help your body and mind settle. Rate your stress before and after to see what helps.</p>
+    <div class="grid">
+      <section class="card stack" aria-labelledby="breathH">
+        <h2 id="breathH">Breathing</h2>
+        <p class="muted">Breathe in for 4, hold for 4, out for 6. Follow the circle.</p>
+        <div class="breath-stage"><div class="breath-circle" id="breathCircle">Ready</div></div>
+        <p class="breath-cue" id="breathCue" aria-live="polite"></p>
+        <div class="row"><button type="button" class="btn btn-primary" id="breathStart">Start</button>
+          <button type="button" class="btn" id="breathStop" disabled>Stop</button></div>
+        <div data-checkin="breathing"></div>
+      </section>
+      <section class="card stack" aria-labelledby="groundH">
+        <h2 id="groundH">5-4-3-2-1 grounding</h2>
+        <p class="muted">Notice what's around you, one sense at a time.</p>
+        <div class="progress" aria-hidden="true"><span id="groundProgress"></span></div>
+        <p class="breath-cue" id="groundPrompt" aria-live="polite"></p>
+        <div class="row"><button type="button" class="btn" id="groundBack">Back</button>
+          <button type="button" class="btn btn-primary" id="groundNext">Next</button></div>
+        <div data-checkin="grounding"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== Care Team ===== -->
+  <div class="view" id="view-care-team" data-label="care team" hidden>
+    <h1 class="page-title">Care Team</h1>
+    <p class="lede">You decide who sees what. Providers see only your health documents. Family see only urgent alerts. Nobody sees your chats.</p>
+    <section class="card stack" aria-labelledby="sosH">
+      <h2 id="sosH">Need support right now?</h2>
+      <p>This alerts the family members on your care team so they can check in with you.</p>
+      <div class="row sos-row">
+        <button type="button" class="btn btn-primary sos" data-kind="panic_attack">I'm having a panic attack</button>
+        <button type="button" class="btn btn-primary sos" data-kind="meltdown">I'm having a meltdown</button>
+        <button type="button" class="btn sos" data-kind="other">Please check in on me</button>
+      </div>
+      <p id="sosStatus" class="status" role="status"></p>
+      <p class="crisis-line">If you're in danger, call or text <a href="tel:988">988</a> or call <a href="tel:911">911</a>. AttuneMIND can't send emergency help.</p>
+    </section>
+    <section class="card stack" aria-labelledby="teamH">
+      <h2 id="teamH">People on your care team</h2>
+      <ul class="list" id="teamList"></ul>
+      <form id="addForm" class="stack">
+        <label for="memberEmail">Add someone by their email</label>
+        <p class="muted">They need to sign in once first, using the provider or family sign-in.</p>
+        <div class="row"><input type="email" id="memberEmail" autocomplete="email" placeholder="name@example.com" required style="flex:1 1 220px">
+          <button type="submit" class="btn btn-primary">Add</button></div>
+        <p id="addStatus" class="status" role="status"></p>
+      </form>
+      <label class="check"><input type="checkbox" id="autoAlerts">
+        <span>Alert my family automatically if my chats show signs of a panic attack, meltdown or crisis. They see only the type of alert, never what I wrote.</span></label>
+    </section>
+    <section class="card stack" aria-labelledby="docsH">
+      <h2 id="docsH">Health documents</h2>
+      <p class="muted">Visible to you and the health providers on your care team.</p>
+      <ul class="list" id="docList"></ul>
+      <form id="docForm" class="stack">
+        <label for="docTitle">Add a document</label>
+        <input type="text" id="docTitle" maxlength="200" placeholder="Title, e.g. Medication list" required>
+        <textarea id="docBody" rows="3" placeholder="Details"></textarea>
+        <div><button type="submit" class="btn btn-primary">Add document</button></div>
+      </form>
+    </section>
+    <section class="card stack" aria-labelledby="alertsH">
+      <h2 id="alertsH">Recent alerts</h2>
+      <ul class="list" id="alertList"></ul>
+    </section>
+  </div>
+
+  <!-- ===== Settings ===== -->
+  <div class="view" id="view-settings" data-label="settings" hidden>
+    <h1 class="page-title">Settings</h1>
+    <section class="card stack" aria-labelledby="meH">
+      <h2 id="meH">Your account</h2>
+      <p><strong id="setName"></strong> <span class="muted" id="setEmail"></span></p>
+      <p class="muted">Your name and email come from your Google account.</p>
+    </section>
+    <section class="card stack" aria-labelledby="prefH">
+      <h2 id="prefH">Preferences</h2>
+      <label class="check"><input type="checkbox" id="setGreeting"> <span>Say hello out loud when I open the dashboard</span></label>
+      <label class="check"><input type="checkbox" id="setExpressions">
+        <span>Save my camera expression readings (from voice and camera chat) to my account</span></label>
+      <p class="muted">Text size, font and colors can be changed with the <strong>Aa</strong> button on the other pages.</p>
+    </section>
+    <section class="card stack" aria-labelledby="delH">
+      <h2 id="delH">Your data</h2>
+      <p>Permanently delete your account, moods, check-ins, health documents and alerts, and remove everyone from your care team.</p>
+      <div class="row"><button type="button" class="btn btn-danger" id="deleteBtn">Delete my account</button>
+        <a class="muted" href="/privacy">Privacy &amp; disclosures</a></div>
+      <p id="deleteStatus" class="status" role="status"></p>
+    </section>
+  </div>
 </main>
 
-<script>
-(function(){
+<footer class="site-footer">
+  <p class="crisis-line"><strong>In crisis?</strong> In the US call or text <a href="tel:988">988</a>,
+    text HOME to <a href="sms:741741">741741</a>, or call <a href="tel:911">911</a> in an emergency.</p>
+</footer>
 
-  var quotes = [
-  "Small steps still move you forward.",
-  "You don't have to have it all figured out today.",
-  "Progress is progress, no matter how small.",
-  "Be kind to yourself as you grow."
-];
-
-var quote = quotes[Math.floor(Math.random() * quotes.length)];
-document.getElementById("inspirationalQuote").textContent = "“" + quote + "”";
-  var userName = document.getElementById("userName");
-  fetch("/api/me")
-    .then(function(response){
-      if(!response.ok) throw new Error("Could not load the signed-in user.");
-      return response.json();
-    })
-    .then(function(user){
-      if(typeof user.name !== "string" || !user.name.trim()) {
-        throw new Error("The signed-in user has no display name.");
-      }
-      userName.textContent = user.name;
-    })
-    .catch(function(error){
-      userName.textContent = "Unable to load your name";
-      console.error("Could not load the signed-in user's name.", error);
-    });
-
-  var meanings = {
-    Yellow:"Yellow means you feel happy and full of energy. It feels bright, like the sun.",
-    Green:"Green means you feel calm and steady. Everything feels okay.",
-    Blue:"Blue means you feel quiet or a little sad. It is okay to slow down and rest.",
-    Red:"Red means you have strong feelings, like anger or worry. Try taking a deep breath.",
-    Purple:"Purple means you feel dreamy and thoughtful. Your mind is busy with big ideas."
-  };
-  var capsule = document.getElementById("capsule");
-  var nameEl = document.getElementById("moodName");
-  var textEl = document.getElementById("moodMeaning");
-  var dots = document.querySelectorAll(".dot");
-  dots.forEach(function(d){
-    d.addEventListener("click", function(){
-      dots.forEach(function(o){ o.setAttribute("aria-pressed", o === d ? "true" : "false"); });
-      capsule.style.setProperty("--mood", d.dataset.color);
-      nameEl.textContent = d.dataset.name;
-      textEl.textContent = meanings[d.dataset.name];
-    });
-  });
-
-  var btn = document.getElementById("menuBtn");
-  var menu = document.getElementById("menu");
-  function setMenu(open){
-    menu.hidden = !open;
-    btn.setAttribute("aria-expanded", open ? "true" : "false");
-    btn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
-  }
-  btn.addEventListener("click", function(e){ e.stopPropagation(); setMenu(menu.hidden); });
-  document.addEventListener("click", function(e){ if(!menu.hidden && !menu.contains(e.target)) setMenu(false); });
-  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !menu.hidden){ setMenu(false); btn.focus(); } });
-})();
-</script>
+<script src="test.js" defer></script>
 </body>
 </html>

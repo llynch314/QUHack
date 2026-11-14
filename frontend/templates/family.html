@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block page_label %}alerts{% endblock %}
 {% block title %}Alerts - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Alerts</h1>
@@ -9,6 +10,39 @@
 {% else %}
     <div class="card"><p>No one has added you yet. Ask them to add <strong>{{ current_user.email }}</strong> on their AttuneMIND Care Team page.</p></div>
 {% endif %}
+
+<section class="card stack" aria-labelledby="sms-h" style="margin-bottom:16px">
+    <h2 id="sms-h">Text me alerts</h2>
+    <p class="muted">Get a text message when there's a new alert, so you don't need to keep this page open.
+        Texts only say who needs support and what kind of alert it is, never what they wrote. Reply STOP to any text to stop them.</p>
+    <p id="smsDemo" class="notice" hidden>Demo mode: texting isn't set up on this server yet, so texts (and codes) are printed in the server terminal instead of sent.</p>
+
+    <div id="smsAdd" class="stack" hidden>
+        <form id="phoneForm" class="stack">
+            <label for="phoneInput">Mobile number</label>
+            <input type="tel" id="phoneInput" autocomplete="tel" inputmode="tel" placeholder="e.g. 555-123-4567" required>
+            <div><button type="submit" class="btn btn-primary">Text me a code</button></div>
+        </form>
+        <form id="codeForm" class="stack" hidden>
+            <label for="codeInput">Enter the 6-digit code we texted you</label>
+            <input type="text" id="codeInput" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
+            <div class="row">
+                <button type="submit" class="btn btn-primary">Confirm number</button>
+                <button type="button" class="btn" id="codeBack">Use a different number</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="smsOn" class="stack" hidden>
+        <p>Texts go to <strong id="phoneShown"></strong>.</p>
+        <label class="row"><input type="checkbox" id="smsToggle"> Send me text alerts</label>
+        <div class="row">
+            <button type="button" class="btn" id="smsTest">Send a test text</button>
+            <button type="button" class="btn" id="phoneRemove">Remove my number</button>
+        </div>
+    </div>
+    <p id="smsStatus" class="status" role="status"></p>
+</section>
 
 <div id="alerts" class="stack" aria-live="polite"></div>
 
@@ -82,5 +116,92 @@
 
     load();
     setInterval(load, 20000);   // check for new alerts every 20 seconds
+
+    // ---- Text-message alerts ----
+    const sms = {
+        add: document.getElementById('smsAdd'), on: document.getElementById('smsOn'),
+        phoneForm: document.getElementById('phoneForm'), codeForm: document.getElementById('codeForm'),
+        phoneInput: document.getElementById('phoneInput'), codeInput: document.getElementById('codeInput'),
+        shown: document.getElementById('phoneShown'), toggle: document.getElementById('smsToggle'),
+        status: document.getElementById('smsStatus'), demo: document.getElementById('smsDemo'),
+    };
+
+    async function smsApi(path, method, body) {
+        const res = await fetch(path, {
+            method, headers: { 'Content-Type': 'application/json' },
+            body: body ? JSON.stringify(body) : undefined,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
+        return data;
+    }
+
+    function showPhone(state) {
+        sms.demo.hidden = !state.demo_mode;
+        sms.add.hidden = !!state.phone;
+        sms.on.hidden = !state.phone;
+        if (state.phone) {
+            sms.shown.textContent = state.phone;
+            sms.toggle.checked = state.sms_alerts;
+        } else {
+            sms.phoneForm.hidden = false;
+            sms.codeForm.hidden = true;
+        }
+    }
+
+    async function run(action, okMessage) {
+        sms.status.textContent = '';
+        try {
+            const data = await action();
+            if (okMessage) sms.status.textContent = typeof okMessage === 'function' ? okMessage(data) : okMessage;
+            return data;
+        } catch (err) {
+            sms.status.textContent = err.message;
+        }
+    }
+
+    sms.phoneForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const data = await run(() => smsApi('/api/me/phone', 'POST', { phone: sms.phoneInput.value }),
+            d => d.demo_mode ? 'Demo mode: your code is in the server terminal.' : 'Code sent. It can take a minute to arrive.');
+        if (data) {
+            sms.phoneForm.hidden = true;
+            sms.codeForm.hidden = false;
+            sms.codeInput.value = '';
+            sms.codeInput.focus();
+        }
+    });
+
+    sms.codeForm.addEventListener('submit', async e => {
+        e.preventDefault();
+        const state = await run(() => smsApi('/api/me/phone/verify', 'POST', { code: sms.codeInput.value }),
+            "Your number is confirmed. You'll get a text for new alerts.");
+        if (state) showPhone(state);
+    });
+
+    document.getElementById('codeBack').addEventListener('click', () => {
+        sms.codeForm.hidden = true;
+        sms.phoneForm.hidden = false;
+        sms.status.textContent = '';
+        sms.phoneInput.focus();
+    });
+
+    sms.toggle.addEventListener('change', async () => {
+        const state = await run(() => smsApi('/api/me/phone', 'PATCH', { sms_alerts: sms.toggle.checked }),
+            d => d.sms_alerts ? 'Text alerts are on.' : 'Text alerts are off. You can still see alerts on this page.');
+        if (state) showPhone(state); else sms.toggle.checked = !sms.toggle.checked;
+    });
+
+    document.getElementById('smsTest').addEventListener('click', () =>
+        run(() => smsApi('/api/me/phone/test', 'POST'),
+            d => d.demo_mode ? 'Demo mode: the test text is in the server terminal.' : 'Test text sent.'));
+
+    document.getElementById('phoneRemove').addEventListener('click', async () => {
+        if (!confirm('Remove your number and stop text alerts?')) return;
+        const state = await run(() => smsApi('/api/me/phone', 'DELETE'), 'Your number was removed.');
+        if (state) showPhone(state);
+    });
+
+    smsApi('/api/me/phone', 'GET').then(showPhone).catch(() => {});
 </script>
 {% endblock %}
