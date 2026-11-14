@@ -32,13 +32,15 @@ def test_tampered_ciphertext_fails_integrity(patient_client):
         security.decrypt_value(tampered)
 
 
-def test_missing_key_refuses_to_start_without_demo_mode(monkeypatch):
+def test_missing_key_still_starts_with_a_local_key(monkeypatch):
+    """A teammate's older .env has no WEARABLE_DATA_KEY: the app must still start (data still encrypted)."""
     monkeypatch.delenv('WEARABLE_DATA_KEY', raising=False)
     monkeypatch.setenv('DEMO_MODE', '0')
     security.reset_crypto_for_tests()
     try:
-        with pytest.raises(RuntimeError):
-            security.get_fernet()
+        f = security.get_fernet()
+        assert security.KEY_SOURCE == 'dev-generated'
+        assert f.decrypt(f.encrypt(b'72')) == b'72'
     finally:
         monkeypatch.undo()
         security.reset_crypto_for_tests()

@@ -207,5 +207,22 @@ def demo_user(role):
     return user
 
 
+def link_demo_team():
+    """DEV_LOGIN: put whichever demo family member / provider exist on the demo patient's care team,
+    without touching their consent or profile (used after the normal Sign in -> demo buttons)."""
+    patient = demo_patient()
+    if patient is None:
+        return 0
+    added = 0
+    for role in ('family', 'provider'):
+        member = User.query.filter_by(google_sub=f'dev-demo-{role}', role=role).first()
+        if member and not CareLink.query.filter_by(patient_id=patient.id, member_id=member.id).first():
+            db.session.add(CareLink(patient_id=patient.id, member_id=member.id))
+            added += 1
+    if added:
+        db.session.commit()
+    return added
+
+
 def demo_patient():
     return User.query.filter_by(google_sub=DEMO_PATIENT_SUB).first()

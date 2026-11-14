@@ -85,7 +85,7 @@
                 {{ item(url_for('test_dashboard') ~ '#chatbot', 'Chatbot') }}
                 {{ item(url_for('test_dashboard') ~ '#toolkit', 'Calm Toolkit') }}
                 {{ item(url_for('test_dashboard') ~ '#care-team', 'Care Team') }}
-                {{ item(url_for('wearable.page'), 'My Watch', 'wearable.page') }}{# --- wearable --- #}
+                {% if wearable_enabled %}{{ item(url_for('wearable.page'), 'My Watch', 'wearable.page') }}{% endif %}{# --- wearable --- #}
                 {{ item(url_for('test_dashboard') ~ '#settings', 'Settings') }}
             {% elif current_user and current_user.role == 'provider' %}
                 {{ item(url_for('care.provider_home'), 'My patients', 'care.provider_home') }}

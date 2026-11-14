@@ -59,8 +59,9 @@ def get_fernet():
         key = (os.getenv('WEARABLE_DATA_KEY') or '').strip()
         if key:
             KEY_SOURCE = 'env'
-        elif demo_mode():
-            # Persist the dev key next to the DB so data survives restarts in demo mode.
+        else:
+            # No key in .env (e.g. a teammate's older .env): generate one and keep it next to the DB
+            # (backend/instance/ is git-ignored) so the app still starts and data survives restarts.
             path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                 'instance', 'wearable_dev.key')
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -72,11 +73,8 @@ def get_fernet():
                 with open(path, 'wb') as f:
                     f.write(key.encode())
             KEY_SOURCE = 'dev-generated'
-            log.warning('!!! WEARABLE_DATA_KEY is not set. DEMO_MODE=1, so a DEV key was generated at '
-                        'backend/instance/wearable_dev.key. Never use this with real patient data. !!!')
-        else:
-            raise RuntimeError('WEARABLE_DATA_KEY is not set in backend/.env. Generate one with: '
-                               'python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"')
+            log.warning('!!! WEARABLE_DATA_KEY is not set, so a local key was generated at '
+                        'backend/instance/wearable_dev.key. Set WEARABLE_DATA_KEY before using real patient data. !!!')
         _fernet = Fernet(key.encode() if isinstance(key, str) else key)
         return _fernet
 

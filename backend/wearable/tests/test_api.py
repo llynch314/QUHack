@@ -475,3 +475,17 @@ def test_emergency_right_after_distress_still_reports_to_doctor(app):
     assert c.post('/api/demo/scenario', json={'scenario': 'sustained_distress'}).json['report_created']
     assert c.post('/api/demo/scenario', json={'scenario': 'fall'}).json['report_created']
     assert not c.post('/api/demo/scenario', json={'scenario': 'fall'}).json['report_created']   # no duplicate
+
+
+def test_team_demo_signin_links_demo_accounts(app):
+    """The normal Sign in -> demo buttons (main's /login/dev) also connect the demo care team."""
+    users = {}
+    for role in ('patient', 'family', 'provider'):
+        c = app.test_client()
+        c.get(f'/login?role={role}')
+        assert c.get('/login/dev').status_code == 302
+        users[role] = c
+    fam = User.query.filter_by(google_sub='dev-demo-family').one()
+    assert fam.role == 'family'
+    from models import CareLink
+    assert CareLink.query.count() == 2

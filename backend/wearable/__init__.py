@@ -47,6 +47,18 @@ def init_wearable(app):
         except Exception:   # never break the rest of the app over this
             log.exception('wearable: sending due alerts failed')
 
+    @app.after_request
+    def _link_demo_accounts(resp):
+        """The team's own demo sign-in (/login/dev) creates the demo accounts; link them up so the
+        demo family member and provider see Demo Patient no matter which way they signed in."""
+        if os.getenv('DEV_LOGIN') == '1' and request.endpoint in ('auth.dev_login', 'auth.consent'):
+            try:
+                from .integrations import link_demo_team
+                link_demo_team()
+            except Exception:
+                log.exception('wearable: linking demo accounts failed')
+        return resp
+
     @event.listens_for(User, 'before_delete')
     def _delete_wearable_data(mapper, connection, user):
         """Deleting an account (main's delete_user_everywhere) also deletes its wearable data."""
@@ -57,7 +69,7 @@ def init_wearable(app):
 
     @app.context_processor
     def _wearable_ctx():
-        return {'wearable_demo_mode': os.getenv('DEMO_MODE') == '1',
+        return {'wearable_enabled': True, 'wearable_demo_mode': os.getenv('DEMO_MODE') == '1',
                 'wearable_dev_login': os.getenv('DEV_LOGIN') == '1'}
 
 
