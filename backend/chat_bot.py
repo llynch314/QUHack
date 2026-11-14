@@ -1,5 +1,5 @@
 """Terminal version of the AttuneMIND chatbot. Run with `make chat`."""
-from gemini_backend import chat_reply
+from claude_chat import chat_reply
 
 
 def chatbot():

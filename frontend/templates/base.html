@@ -83,7 +83,7 @@
                 </details>
                 {% if current_user %}
                     <form method="post" action="{{ url_for('auth.logout') }}">
-                        <span class="muted">{{ current_user.role_label }}</span>
+                        <a class="muted" href="{{ url_for('auth.account') }}" {% if request.endpoint == 'auth.account' %}aria-current="page"{% endif %}>{{ current_user.role_label }} account</a>
                         <button class="btn btn-ghost" type="submit">Sign out</button>
                     </form>
                 {% else %}

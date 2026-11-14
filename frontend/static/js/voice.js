@@ -2,13 +2,9 @@
 (function () {
     const startBtn = document.getElementById('voiceStart');
     const stopBtn = document.getElementById('voiceStop');
-    const modelSel = document.getElementById('voiceModel');
-    const thinkingRow = document.getElementById('thinkingRow');
-    const thinkingSel = document.getElementById('thinkingLevel');
     const status = document.getElementById('voiceStatus');
     const level = document.getElementById('voiceLevel');
 
-    modelSel.addEventListener('change', () => { thinkingRow.hidden = modelSel.value !== 'extended'; });
 
     let ws = null, micStream = null, recordCtx = null, playCtx = null, frameTimer = null;
     let playTime = 0, playing = [];
@@ -80,9 +76,8 @@
         const recorder = new AudioWorkletNode(recordCtx, 'pcm-recorder');
         source.connect(recorder);
 
-        const params = new URLSearchParams({ mode: modelSel.value, thinking: thinkingSel.value });
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        ws = new WebSocket(`${proto}//${location.host}/ws/voice?${params}`);
+        ws = new WebSocket(`${proto}//${location.host}/ws/voice`);
         ws.binaryType = 'arraybuffer';
         setStatus('Connecting to Gemini...');
 

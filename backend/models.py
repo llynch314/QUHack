@@ -43,6 +43,11 @@ class User(db.Model):
     # Patients only: alert family automatically when chat shows signs of a panic attack,
     # meltdown or crisis. Patients can switch this off on their Care Team page.
     auto_alerts = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
+    # Providers only: shown to patients so they know who they're sharing records with.
+    # Self-reported; AttuneMIND does not verify them.
+    organization = db.Column(db.String(200))    # hospital, clinic or practice
+    specialty = db.Column(db.String(120))       # e.g. "Psychiatrist", "Therapist (LCSW)"
+    license_number = db.Column(db.String(60))   # optional, e.g. state licence or NPI
     created_at = db.Column(db.DateTime(timezone=True), default=_now)
     # Consent, collected on the consent screen when the account is created.
     terms_accepted_at = db.Column(db.DateTime(timezone=True))   # None = hasn't agreed yet
@@ -60,6 +65,18 @@ class User(db.Model):
     @property
     def role_label(self):
         return ROLE_LABELS.get(self.role, self.role)
+
+    @property
+    def needs_profile(self):
+        """Providers must say where they work before using the provider pages."""
+        return self.role == 'provider' and not self.organization
+
+    @property
+    def provider_summary(self):
+        """e.g. 'Psychiatrist, City Hospital'; '' for non-providers or empty profiles."""
+        if self.role != 'provider':
+            return ''
+        return ', '.join(p for p in (self.specialty, self.organization) if p)
 
 
 class CheckIn(db.Model):
@@ -113,7 +130,9 @@ class CareLink(db.Model):
             'id': self.id,
             'patient': {'id': self.patient.id, 'name': self.patient.display_name},
             'member': {'id': self.member.id, 'name': self.member.display_name,
-                       'email': self.member.email, 'role': self.member.role},
+                       'email': self.member.email, 'role': self.member.role,
+                       'organization': self.member.organization,
+                       'specialty': self.member.specialty},
             'created_at': as_utc(self.created_at).isoformat(),
         }
 
@@ -194,6 +213,9 @@ def add_missing_columns():
         'expressions_consent_at': 'TIMESTAMP',
         'role': "VARCHAR(20) NOT NULL DEFAULT 'patient'",
         'auto_alerts': 'BOOLEAN NOT NULL DEFAULT TRUE',
+        'organization': 'VARCHAR(200)',
+        'specialty': 'VARCHAR(120)',
+        'license_number': 'VARCHAR(60)',
     }
     with db.engine.begin() as conn:
         for name, ddl in new_columns.items():

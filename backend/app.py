@@ -8,14 +8,14 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 from flask import Flask, g, jsonify, render_template, request, session
-from google.genai import errors as genai_errors
+import anthropic
 
 load_dotenv()
 
 from auth import bp as auth_bp, init_auth, login_required, roles_required  # noqa: E402
 from care import alert_from_chat, bp as care_bp  # noqa: E402
-from gemini_backend import chat_reply  # noqa: E402
-from gemini_emotion import NoFaceDetected, detect_emotion  # noqa: E402
+from claude_chat import chat_reply  # noqa: E402
+from claude_emotion import NoFaceDetected, detect_emotion  # noqa: E402
 from models import CheckIn, ExpressionReading, add_missing_columns, as_utc, db, delete_user_everywhere  # noqa: E402
 from safety import detect_urgent  # noqa: E402
 from voice import sock  # noqa: E402
@@ -114,8 +114,8 @@ QUOTA_MESSAGE = 'The AI usage limit has been reached for now. Please try again l
 
 
 def _is_quota_error(exc):
-    """True when Gemini rejected the call because the API key ran out of quota (HTTP 429)."""
-    return isinstance(exc, genai_errors.APIError) and exc.code == 429
+    """True when Claude rejected the call because of rate limits or quota (HTTP 429)."""
+    return isinstance(exc, anthropic.RateLimitError)
 
 
 @app.post('/api/chat')
@@ -131,9 +131,9 @@ def api_chat():
         return _error(str(e), 503)
     except Exception as e:
         if _is_quota_error(e):
-            log.warning('Gemini chat skipped: API quota exhausted (429)')
+            log.warning('Claude chat skipped: API quota exhausted (429)')
             return _error(QUOTA_MESSAGE, 429)
-        log.exception('Gemini chat failed')
+        log.exception('Claude chat failed')
         return _error("The AI service isn't responding right now. Please try again in a moment.", 502)
 
     # Signed-in patients: alert their family on signs of a crisis, panic attack or meltdown.
@@ -168,9 +168,9 @@ def api_emotion():
         return _error(str(e), 503)
     except Exception as e:
         if _is_quota_error(e):
-            log.warning('Gemini emotion detection skipped: API quota exhausted (429)')
+            log.warning('Claude emotion detection skipped: API quota exhausted (429)')
             return _error(QUOTA_MESSAGE, 429)
-        log.exception('Gemini emotion detection failed')
+        log.exception('Claude emotion detection failed')
         return _error('Emotion detection failed.', 502)
     return jsonify(emotion=emotion, saved=_record_expression(emotion, source))
 

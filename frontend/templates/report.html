@@ -106,9 +106,8 @@
 
 <section class="card stack no-print" aria-labelledby="data-h" style="margin-top:16px">
     <h2 id="data-h">Your data</h2>
-    <p>Signed in as {{ current_user.email or current_user.name }}. You can permanently delete your account, check-ins and expression readings at any time.</p>
-    <div><button type="button" class="btn" id="deleteBtn">Delete my account and data</button></div>
-    <p id="deleteStatus" role="status"></p>
+    <p>Signed in as {{ current_user.email or current_user.name }}. You can permanently delete your account, check-ins and expression readings at any time
+        from <a href="{{ url_for('auth.account') }}">My account</a>.</p>
 </section>
 {% endblock %}
 {% block scripts %}
@@ -131,13 +130,6 @@
         if (!confirm('Delete all saved expression readings? This cannot be undone.')) return;
         const res = await fetch('/api/expressions/delete', { method: 'POST' });
         if (res.ok) location.reload();
-    });
-
-    document.getElementById('deleteBtn').addEventListener('click', async () => {
-        if (!confirm('Permanently delete your account and all check-ins? This cannot be undone.')) return;
-        const res = await fetch('/api/me/delete', { method: 'POST' });
-        if (res.ok) location.href = '/';
-        else document.getElementById('deleteStatus').textContent = 'Could not delete your data. Please try again.';
     });
 </script>
 {% endblock %}

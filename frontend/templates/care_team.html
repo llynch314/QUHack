@@ -25,7 +25,8 @@
             <tbody>
             {% for l in links %}
                 <tr>
-                    <td>{{ l.member.display_name }}<br><span class="muted">{{ l.member.email }}</span></td>
+                    <td>{{ l.member.display_name }}<br><span class="muted">{{ l.member.email }}</span>
+                        {% if l.member.role == 'provider' %}<br><span class="muted">{{ l.member.provider_summary or 'Profile not filled in yet' }}</span>{% endif %}</td>
                     <td>{{ l.member.role_label }}</td>
                     <td>{{ 'Health documents' if l.member.role == 'provider' else 'Urgent alerts' }}</td>
                     <td><button type="button" class="btn btn-ghost remove" data-id="{{ l.id }}">Remove</button></td>

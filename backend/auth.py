@@ -234,8 +234,35 @@ def consent():
             g.user.save_expressions = request.form.get('save_expressions') == 'yes'
             g.user.expressions_consent_at = now
             db.session.commit()
-            return redirect(_safe_next(session.pop('next', None)))
+            next_url = _safe_next(session.pop('next', None))
+            if g.user.needs_profile:   # providers say where they work before seeing patients
+                return redirect(url_for('auth.account', next=next_url))
+            return redirect(next_url)
     return render_template('consent.html', error=error), (400 if error else 200)
+
+
+PROFILE_FIELDS = {'organization': 200, 'specialty': 120, 'license_number': 60}   # field: max length
+
+
+@bp.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+    """Account details for every role: provider profile (providers only) and account deletion."""
+    error = None
+    next_url = request.args.get('next')
+    if request.method == 'POST':
+        if g.user.role != 'provider':
+            abort(403)
+        values = {f: (request.form.get(f) or '').strip()[:n] or None for f, n in PROFILE_FIELDS.items()}
+        if not values['organization']:
+            error = 'Please add the hospital, clinic or practice you work at.'
+        else:
+            for field, value in values.items():
+                setattr(g.user, field, value)
+            db.session.commit()
+            flash('Your provider profile is saved.')
+            return redirect(_safe_next(next_url) if next_url else url_for('auth.account'))
+    return render_template('account.html', error=error, next=next_url), (400 if error else 200)
 
 
 @bp.route('/settings/expressions', methods=['POST'])

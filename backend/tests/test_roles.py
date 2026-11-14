@@ -8,7 +8,7 @@ import pytest
 os.environ['DATABASE_URL'] = 'sqlite://'           # in-memory database for tests
 os.environ['FLASK_SECRET_KEY'] = 'test'
 os.environ['DEV_LOGIN'] = '1'
-os.environ.pop('GOOGLE_CLIENT_ID', None)
+os.environ['GOOGLE_CLIENT_ID'] = ''          # empty (not removed) so load_dotenv() in app.py can't refill it from .env
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import app as app_module  # noqa: E402
@@ -32,6 +32,8 @@ def make_user(role, name):
     with flask_app.app_context():
         u = User(google_sub=f'sub-{name}', role=role, name=name.title(), email=f'{name}@example.com',
                  terms_accepted_at=_now())
+        if role == 'provider' and name != 'newdoc':
+            u.organization, u.specialty = 'City Hospital', 'Psychiatrist'
         db.session.add(u)
         db.session.commit()
         return u.id
@@ -215,3 +217,56 @@ def test_delete_account_cleans_up(world):
     assert c['pat'].post('/api/me/delete').status_code == 200
     assert c['mom'].get('/api/alerts').json['alerts'] == []
     assert c['doc'].get('/api/care-team').json['links'] == []
+
+
+# ---------- account page + provider profile ----------
+
+def test_account_page_for_every_role(world):
+    ids, c = world
+    for who in ('pat', 'doc', 'mom'):
+        page = c[who].get('/account').data
+        assert b'deleteBtn' in page, who
+        assert (b'Provider profile' in page) == (who == 'doc'), who
+    assert flask_app.test_client().get('/account').status_code == 302   # signed out
+
+
+def test_provider_and_family_can_delete_their_accounts(world):
+    ids, c = world
+    for who in ('doc', 'mom'):
+        assert c[who].post('/api/me/delete').status_code == 200, who
+    assert c['pat'].get('/api/care-team').json['links'] == []
+
+
+def test_new_provider_must_add_organization_first():
+    uid = make_user('provider', 'newdoc')
+    c = client_for(uid)
+    r = c.get('/provider')
+    assert r.status_code == 302 and '/account' in r.headers['Location']
+    r = c.post('/account?next=/provider', data={'organization': '  ', 'specialty': 'Therapist'})
+    assert r.status_code == 400 and b'Therapist' in r.data      # error keeps what they typed
+    r = c.post('/account?next=/provider', data={'organization': 'Mercy Clinic', 'specialty': 'Therapist'})
+    assert r.headers['Location'].endswith('/provider')
+    assert c.get('/provider').status_code == 200
+
+
+def test_provider_consent_leads_to_profile():
+    c = flask_app.test_client()
+    c.get(c.get('/login?role=provider').headers['Location'])
+    r = c.post('/welcome', data={'agree': 'yes'})
+    assert '/account' in r.headers['Location']
+
+
+def test_only_providers_save_a_profile(world):
+    ids, c = world
+    assert c['pat'].post('/account', data={'organization': 'X'}).status_code == 403
+    assert c['mom'].post('/account', data={'organization': 'X'}).status_code == 403
+
+
+def test_patient_sees_provider_details(world):
+    ids, c = world
+    member = next(l['member'] for l in c['pat'].get('/api/care-team').json['links']
+                  if l['member']['role'] == 'provider')
+    assert member['organization'] == 'City Hospital' and member['specialty'] == 'Psychiatrist'
+    assert b'Psychiatrist, City Hospital' in c['pat'].get('/care-team').data
+    doc = c['doc'].post(f"/api/patients/{ids['pat']}/documents", json={'title': 'Notes'}).json['document']
+    assert doc['author_name'] == 'Doc, Psychiatrist, City Hospital (Health provider)'

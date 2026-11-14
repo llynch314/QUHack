@@ -3,8 +3,8 @@ AI-powered mental well-being companion (healthcare hackathon project).
 
 ## Features
 
-- **Chat** with a CBT/DBT-informed companion (Gemini 3.8 Flash) that builds self-reliance, reads humor and tone, and always surfaces crisis resources (988, 741741, 911) when someone may be at risk.
-- **Talk out loud** in real time with Gemini 3.8 Live, or Live Extended Thinking for deeper replies.
+- **Chat** with a CBT/DBT-informed companion (Claude Opus 5.5) that builds self-reliance, reads humor and tone, and always surfaces crisis resources (988, 741741, 911) when someone may be at risk.
+- **Talk out loud** in real time with Gemini 3.1 Flash Live. (Voice stays on Gemini because Claude has no real-time audio API; it needs its own `GEMINI_API_KEY`.)
 - **Calm Toolkit**: guided breathing, 5-4-3-2-1 grounding, a CBT thought record, DBT skill cards and soft background noise, with stress ratings before and after.
 - **My Progress**: see which skills lower your stress, and choose to print or share a report with a therapist, doctor or parent.
 - **Accessibility** (the **Aa** menu): text size, dyslexia-friendly and low-vision fonts, high contrast, dark mode, reduced motion and read-aloud.
@@ -16,9 +16,11 @@ AI-powered mental well-being companion (healthcare hackathon project).
 | Path | What it is |
 |---|---|
 | `backend/app.py` | Flask app: pages and JSON API |
-| `backend/gemini_client.py` | Gemini client, model names, system prompt, crisis detection |
-| `backend/gemini_backend.py` | Text chat |
-| `backend/gemini_emotion.py` | Webcam expression check |
+| `backend/claude_client.py` | Claude client and model settings |
+| `backend/claude_chat.py` | Text chat (Claude) |
+| `backend/claude_emotion.py` | Webcam expression check (Claude) |
+| `backend/prompts.py` | System prompt and crisis detection, shared by chat and voice |
+| `backend/gemini_client.py` | Gemini client for voice mode only |
 | `backend/voice.py` | Websocket relay between the browser and Gemini Live |
 | `backend/auth.py` | Sign in with Google, the three sign-in doors, and the access rules (`ACCESS`) |
 | `backend/care.py` | Care team, health documents and alerts (pages + API) |
@@ -33,7 +35,8 @@ From the repo root:
 
 ```bash
 make setup    # create the venv, install dependencies, create backend/.env
-# paste your Gemini key into backend/.env (get one at https://aistudio.google.com/apikey)
+# paste your Claude key into backend/.env as ANTHROPIC_API_KEY (get one at https://platform.claude.com/settings/keys)
+# optional: GEMINI_API_KEY too, for voice mode (https://aistudio.google.com/apikey)
 make run      # Flask web app at http://127.0.0.1:5000
 make chat     # terminal chatbot
 make webcam   # webcam emotion demo (press q to quit)
@@ -46,7 +49,7 @@ Run `make` on its own to list all commands. On Windows, install make with `winge
 
 ## Setup (manual)
 
-Requires Python 3.11 or newer (the Gemini library needs it). On a Mac, install Python 3.12 from python.org and use `python3.12 -m venv .venv`. Run these from the `backend/` folder.
+Requires Python 3.11 or newer (the Gemini library used for voice needs it). On a Mac, install Python 3.12 from python.org and use `python3.12 -m venv .venv`. Run these from the `backend/` folder.
 
 ```bash
 # 1. Create and activate a virtual environment
@@ -58,7 +61,7 @@ source .venv/bin/activate     # macOS / Linux
 pip install -r requirements.txt
 pip install -r requirements-voice.txt   # optional, only for speechtotext.py / tts.py
 
-# 3. Add your Gemini API key
+# 3. Add your Claude API key (and optionally a Gemini key for voice)
 copy .env.example .env        # Windows   (macOS/Linux: cp .env.example .env)
 # then edit .env and paste your key
 ```
@@ -67,11 +70,11 @@ copy .env.example .env        # Windows   (macOS/Linux: cp .env.example .env)
 
 | Command | What it does |
 |---|---|
-| `python chat_bot.py` | Chat with the Gemini bot in the terminal |
+| `python chat_bot.py` | Chat with the Claude bot in the terminal |
 | `python emotional_recognition.py` | Webcam emotion detection demo (press `q` to quit) |
 | `python app.py` | Flask web server at http://127.0.0.1:5000 |
 
-Emotion detection sends the image to Gemini, so it uses the same `GEMINI_API_KEY` as the chatbot and needs an internet connection. The webcam demo asks Gemini about once every 1.5 seconds to stay within the free-tier rate limits.
+Emotion detection sends the image to Claude, so it uses the same `ANTHROPIC_API_KEY` as the chatbot and needs an internet connection. The webcam demo asks Claude about once every 1.5 seconds to keep costs and rate limits down.
 
 ## Sign in with Google
 
@@ -83,7 +86,7 @@ Emotion detection sends the image to Gemini, so it uses the same `GEMINI_API_KEY
 ## Privacy and safety notes
 
 - This is a prototype and is **not HIPAA-compliant**. A production version would need a business associate agreement (BAA) with every vendor that touches health data, including the AI provider, plus encryption, access controls and audit logs.
-- On Gemini's free tier, Google may use prompts to improve its products. Don't demo with real patient data.
+- Text chat and webcam snapshots go to Anthropic's Claude API; voice audio (and camera frames during voice) go to Google's Gemini API. On Gemini's free tier, Google may use prompts to improve its products. Don't demo with real patient data.
 - New accounts must agree on a consent screen before using the app. Saving expression readings is a separate opt-in checkbox that starts unchecked.
 - Chats, voice and camera images are never stored. Signed-in users' check-in ratings are stored, and expression words (e.g. "happy") only if they opted in. Readings are saved in the `expression_reading` table, appended to `backend/instance/expression_log.csv` and printed in the `make run` terminal. Users can delete them at any time.
 - Reports are only shared when the user chooses to print or save them.

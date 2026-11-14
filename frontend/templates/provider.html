@@ -3,6 +3,7 @@
 {% block content %}
 <h1>My patients</h1>
 <p class="muted">Patients appear here after they add you ({{ current_user.email }}) to their care team. You can see and add their health documents only.</p>
+<p class="muted">Patients see you as: <strong>{{ current_user.display_name }}, {{ current_user.provider_summary }}</strong>. <a href="{{ url_for('auth.account') }}">Edit profile</a></p>
 
 {% if links %}
     <div class="grid">

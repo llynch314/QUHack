@@ -1,4 +1,4 @@
-// Text chat with Gemini, browser dictation, and the optional webcam expression check.
+// Text chat with Claude, browser dictation, and the optional webcam expression check.
 (function () {
     const log = document.getElementById('chatLog');
     const form = document.getElementById('chatForm');

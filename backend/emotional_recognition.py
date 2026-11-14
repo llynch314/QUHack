@@ -1,15 +1,15 @@
-"""Webcam emotion detection demo using Gemini. Press `q` to quit.
+"""Webcam emotion detection demo using Claude. Press `q` to quit.
 
-Faces are boxed locally with OpenCV; the emotion comes from Gemini, which is
+Faces are boxed locally with OpenCV; the emotion comes from Claude, which is
 asked every ASK_INTERVAL seconds to stay within the API's rate limits.
 """
 import time
 
 import cv2
 
-from gemini_emotion import NoFaceDetected, detect_emotion_frame
+from claude_emotion import NoFaceDetected, detect_emotion_frame
 
-ASK_INTERVAL = 1.5  # seconds between Gemini calls
+ASK_INTERVAL = 1.5  # seconds between Claude calls
 
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 cap = cv2.VideoCapture(0)
@@ -24,7 +24,7 @@ while True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
-    # Only call Gemini when OpenCV sees a face, and not more often than ASK_INTERVAL.
+    # Only call Claude when OpenCV sees a face, and not more often than ASK_INTERVAL.
     # The call blocks for about a second, so the video pauses briefly while it runs.
     if len(faces) and time.monotonic() - last_asked >= ASK_INTERVAL:
         last_asked = time.monotonic()

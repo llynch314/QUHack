@@ -17,13 +17,14 @@
             <li><strong>Chats, voice and camera:</strong> not stored by AttuneMIND. Your conversation is kept only in your
                 browser tab and disappears when you close it.</li>
             <li><strong>Accessibility settings:</strong> saved only in your browser.</li>
-            <li>You can delete your account and all of this data at any time from <a href="{{ url_for('report') }}">My Progress</a>.</li>
+            <li>You can delete your account and all of this data at any time from <a href="{{ url_for('auth.account') }}">My account</a> (click your account type at the top of any page).</li>
         </ul>
     </section>
     <section class="card">
         <h2>AI provider</h2>
-        <p>To create replies, your messages, voice audio and (only if you turn it on) camera snapshots are sent to Google's
-            Gemini API. Depending on the plan the app uses, Google may keep and use this content to improve its products, so please
+        <p>To create replies, your typed messages and (only if you turn it on) camera snapshots are sent to Anthropic's
+            Claude API. In voice mode, your voice audio and camera snapshots are sent to Google's Gemini API instead.
+            Depending on the plan the app uses, the provider may keep and use this content to improve its products, so please
             don't include names, addresses, dates of birth or medical record numbers.</p>
     </section>
     <section class="card">

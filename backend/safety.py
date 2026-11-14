@@ -1,12 +1,12 @@
 """Spot urgent situations in chat so a patient's family can be alerted.
 
-Crisis language uses the same patterns as the chatbot's crisis panel (gemini_client).
+Crisis language uses the same patterns as the chatbot's crisis panel (prompts).
 Panic attacks and meltdowns are extra keyword checks. This is a hackathon-level
 heuristic, not a clinical tool, and it errs on the side of flagging.
 """
 import re
 
-from gemini_client import mentions_crisis
+from prompts import mentions_crisis
 
 _PATTERNS = {
     'panic_attack': [

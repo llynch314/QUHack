@@ -12,7 +12,7 @@
         <ul>
             <li>AttuneMIND is a support tool. It is <strong>not</strong> a therapist, doctor or emergency service, and AI replies can be wrong.</li>
             <li>If you're in danger, call or text <strong>988</strong> (US) or call <strong>911</strong>.</li>
-            <li>Your chats are sent to Google's Gemini AI to create replies. AttuneMIND doesn't save them.</li>
+            <li>Your chats are sent to Anthropic's Claude AI to create replies (voice mode uses Google's Gemini AI). AttuneMIND doesn't save them.</li>
             <li>We save your Google name and email, and the check-in ratings you choose to save. You can delete everything at any time.</li>
         </ul>
         <label class="row"><input type="checkbox" name="agree" value="yes" required>
@@ -22,7 +22,7 @@
     {% if current_user.role == 'patient' %}
     <section class="card stack" aria-labelledby="expr-h">
         <h2 id="expr-h">2. Save my expression readings (optional)</h2>
-        <p>If you turn on your camera in Chat, Gemini reads your facial expression (for example happy, sad or neutral).
+        <p>If you turn on your camera in Chat, the AI reads your facial expression (for example happy, sad or neutral).
             If you tick this box, each reading is saved to your account with the time, so you can see how your mood
             changes in My Progress.</p>
         <ul>

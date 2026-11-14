@@ -6,7 +6,7 @@
 """
 from datetime import timedelta
 
-from flask import Blueprint, abort, g, jsonify, render_template, request
+from flask import Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
 
 from auth import require_access, roles_required
 from models import (ALERT_KINDS, Alert, CareLink, HealthDocument, User, _now, db)
@@ -25,6 +25,20 @@ def _links_for(user):
     if user.role == 'patient':
         return CareLink.query.filter_by(patient_id=user.id).order_by(CareLink.created_at).all()
     return CareLink.query.filter_by(member_id=user.id).order_by(CareLink.created_at).all()
+
+
+def _profile_redirect():
+    """Providers without a profile are sent to fill it in first (patients need to know who they are)."""
+    if g.user.needs_profile:
+        flash('Please add where you work before viewing patients.')
+        return redirect(url_for('auth.account', next=request.path))
+    return None
+
+
+def _author_name(user):
+    """How a document's author is shown, e.g. 'Dr Lee, Psychiatrist, City Hospital (Health provider)'."""
+    details = ', '.join(p for p in (user.display_name, user.provider_summary) if p)
+    return f'{details} ({user.role_label})'
 
 
 def create_alert(patient, kind, source, note=''):
@@ -61,12 +75,14 @@ def care_team_page():
 @bp.route('/provider')
 @roles_required('provider')
 def provider_home():
-    return render_template('provider.html', links=_links_for(g.user))
+    return _profile_redirect() or render_template('provider.html', links=_links_for(g.user))
 
 
 @bp.route('/provider/patients/<int:patient_id>')
 @roles_required('provider')
 def provider_patient(patient_id):
+    if (r := _profile_redirect()):
+        return r
     require_access(patient_id, 'documents')
     patient = db.session.get(User, patient_id)
     docs = (HealthDocument.query.filter_by(patient_id=patient_id)
@@ -148,7 +164,7 @@ def api_create_document(patient_id):
     if not title:
         abort(400, 'Add a title.')
     doc = HealthDocument(patient_id=patient_id, author_id=g.user.id,
-                         author_name=f'{g.user.display_name} ({g.user.role_label})',
+                         author_name=_author_name(g.user),
                          title=title[:200], category=(data.get('category') or 'note').strip()[:50],
                          body=(data.get('body') or '')[:20000])
     db.session.add(doc)
