@@ -28,3 +28,8 @@ numpy>=1.26
 
 # Tests (run `pytest` from backend/)
 pytest>=8
+
+# --- wearable ---
+cryptography>=43          # Fernet field encryption for wearable data at rest
+qrcode>=8.0               # device-pairing QR code (SVG, no Pillow needed)
+# --- end wearable ---

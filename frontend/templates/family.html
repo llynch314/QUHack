@@ -106,7 +106,7 @@
             const h = document.createElement('h2');
             h.textContent = `${a.label}: ${a.patient.name}`;
             const when = document.createElement('p');
-            when.textContent = `${new Date(a.created_at).toLocaleString()} · ${a.source === 'sos' ? 'they pressed the alert button' : 'noticed in chat'}`;
+            when.textContent = `${new Date(a.created_at).toLocaleString()} · ${a.source === 'sos' ? 'they pressed the alert button' : a.source === 'wearable' ? 'from their watch' /* wearable */ : 'noticed in chat'}`;
             card.append(h, when);
             if (a.note) {
                 const note = document.createElement('p');
@@ -146,7 +146,7 @@
     }
 
     load();
-    setInterval(load, 20000);   // check for new alerts every 20 seconds
+    setInterval(load, 5000);   // check for new alerts every 5 seconds (wearable: falls need to show up fast)
 
     // ---- Text-message alerts ----
     const sms = {

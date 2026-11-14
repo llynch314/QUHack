@@ -56,6 +56,13 @@ sock.init_app(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(care_bp)
 app.add_template_filter(lambda dt: as_utc(dt).isoformat(), 'iso')   # for <time datetime=...>
+# --- wearable ---
+try:   # never take the whole site down because of the watch feature
+    from wearable import init_wearable  # noqa: E402
+    init_wearable(app)
+except ImportError as e:
+    log.error('My Watch is off: %s. Run: pip install -r requirements.txt', e)
+# --- end wearable ---
 
 with app.app_context():
     db.create_all()

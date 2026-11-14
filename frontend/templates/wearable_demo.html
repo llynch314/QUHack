@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo console - attunemind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/attune.css') }}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+<style>
+  body { background: var(--bg); }
+  .small { font-size: .88rem; }
+  .demo-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 24px;
+    background: var(--ink); color: var(--surface); }
+  .demo-bar strong { font-size: 1.15rem; }
+  .demo-bar .tag { background: var(--danger); color: #fff; border-radius: var(--pill); padding: 2px 12px; font-size: .85rem; }
+  .demo-bar .muted { color: var(--surface); opacity: .8; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 20px 24px 60px; width: 100%; }
+  h2.sec { margin: 26px 0 10px; }
+  .apps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .apps .card { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  .apps .card > * { margin: 0; }
+  .apps .btn { align-self: flex-start; }
+  .stories { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; }
+  .story { margin: 0; display: flex; flex-direction: column; gap: 6px; border: 2px solid transparent; }
+  .story.ran { border-color: var(--ink); }
+  .story h3 { margin: 0; font-size: 1.1rem; }
+  .story .who { font-size: .9rem; margin: 0; padding-left: 18px; }
+  .story .who li { margin: 2px 0; }
+  .story button { margin-top: auto; }
+  .story .result { font-size: .88rem; background: var(--bg); border-radius: 12px; padding: 6px 10px; margin: 0; }
+  .lvl { display: inline-block; border-radius: var(--pill); padding: 0 10px; font-size: .8rem; font-weight: 600; }
+  .lvl0 { background: #DCE7D3; color: #2A3626; } .lvl1 { background: #F6D9A8; color: #5a3b00; }
+  .lvl2 { background: #F3B9A8; color: #6b1d0f; } .lvl3 { background: #B5483A; color: #fff; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .live { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+  .live .card { margin: 0; min-width: 0; }
+  .live h3 { margin: 0 0 6px; }
+  .big { font-size: 1.7rem; font-weight: 700; text-transform: capitalize; }
+  .phone { border: 1px dashed var(--line); border-radius: 14px; padding: 8px 12px; margin: 6px 0; background: var(--bg); }
+  .phone.red { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .feed { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .feed li { background: var(--bg); border-radius: 12px; padding: 6px 10px; font-size: .92rem; }
+  .feed li.new { border-left: 5px solid var(--danger); }
+  .feed details pre { white-space: pre-wrap; font: inherit; font-size: .82rem; max-height: 280px; overflow: auto; }
+  pre.log { background: var(--surface); border-radius: 14px; padding: 10px 14px; max-height: 220px; overflow: auto;
+    white-space: pre-wrap; font-size: .85rem; margin: 0; }
+  .switch { display: flex; gap: 8px; align-items: flex-start; }
+</style>
+</head>
+<body>
+<div class="demo-bar">
+  <strong>attunemind · Demo console</strong>
+  <span class="tag">DEMO ONLY</span>
+  <span class="muted">Plays a simulated Apple Watch for <strong id="patientName">Demo Patient</strong>. Not part of the app: only works on this laptop with DEMO_MODE=1.</span>
+</div>
+
+<main class="wrap" id="main">
+  <h2 class="sec">1. Open the three apps</h2>
+  <p class="muted">Each opens in its own tab with its own sign-in, so all three stay signed in at once (no private window needed).
+    Put them side by side to show the audience.</p>
+  <div class="apps">
+    {% for a in apps %}
+    <div class="card stack">
+      <strong>{{ a.label }} app</strong>
+      <span class="muted small">{% if a.key == 'patient' %}My Watch: live state, nudges, Call 911{% elif a.key == 'family' %}Alerts page: only urgent alerts, never vitals{% else %}Patient's health documents: watch reports, never live alerts{% endif %}</span>
+      <a class="btn btn-primary" href="{{ a.url }}" target="{{ a.key }}-app" rel="noopener">Open {{ a.label.lower() }} app</a>
+      <a class="muted small" href="{{ a.fallback }}" target="_blank" rel="noopener">Link not opening? Use this one in a private window</a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2 class="sec">2. Play a moment in the patient's day</h2>
+  <p class="muted">Each button sends about 16 minutes of simulated watch data through the same code path as the real watch.
+    The cards say what should happen; the line underneath says what actually happened.</p>
+  <div class="stories" id="stories"></div>
+
+  <h2 class="sec">3. Act as the patient or family</h2>
+  <div class="card stack">
+    <div class="controls">
+      <strong>Patient:</strong>
+      <button type="button" class="btn" data-action="im_ok">Taps "I'm OK"</button>
+      <button type="button" class="btn" data-action="call_911">Taps "Call 911"</button>
+      <button type="button" class="btn" data-action="exercising">Says "I'm exercising"</button>
+      <button type="button" class="btn" data-action="not_okay">Says "I'm not okay"</button>
+      <button type="button" class="btn" data-action="chest_pain">Reports chest pain</button>
+    </div>
+    <div class="controls">
+      <strong>Family:</strong>
+      <button type="button" class="btn" data-action="family_ack">Acknowledges the newest alert</button>
+    </div>
+    <div class="controls">
+      <strong>Patient's choices:</strong>
+      <label class="switch"><input type="checkbox" id="emergency_alerts"> <span>Emergency alerts to family</span></label>
+      <label class="switch"><input type="checkbox" id="family_tier2_alerts"> <span>Tell family when I'm very stressed</span></label>
+    </div>
+    <div class="controls">
+      <button type="button" class="btn btn-ghost" id="reset">Reset demo (clears watch data, alerts and reports)</button>
+      <span class="muted small">The 60 s fall countdown is real: wait it out, or use "Taps I'm OK" / "Taps Call 911".</span>
+    </div>
+  </div>
+
+  <h2 class="sec">4. Who sees what, right now</h2>
+  <div class="live">
+    <section class="card" aria-labelledby="pH">
+      <h3 id="pH">Patient's phone &amp; watch</h3>
+      <div class="big" id="pState">no data</div>
+      <div id="pTier"></div>
+      <p class="small muted" id="pVitals"></p>
+      <div id="pNudge"></div>
+      <div id="pEmergency"></div>
+    </section>
+    <section class="card" aria-labelledby="fH">
+      <h3 id="fH">Family's Alerts page</h3>
+      <p class="small muted" id="fWho"></p>
+      <ul class="feed" id="fAlerts"></ul>
+    </section>
+    <section class="card" aria-labelledby="dH">
+      <h3 id="dH">Doctor's patient documents</h3>
+      <p class="small muted" id="dWho"></p>
+      <ul class="feed" id="dReports"></ul>
+      <p class="small muted">Doctors never get live alerts or live vitals.</p>
+    </section>
+  </div>
+
+  <h2 class="sec">Event log</h2>
+  <pre class="log" id="log" aria-live="polite">Ready.</pre>
+</main>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const time = iso => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+  const log = msg => { $('log').textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + $('log').textContent; };
+
+  // What each scenario is, and what should happen for each person.
+  const STORIES = [
+    { id: 'baseline', title: 'Calm', lvl: 0, watch: 'Resting heart rate, steady HRV.',
+      patient: 'Calm. Nothing pops up.', family: 'Nothing.', doctor: 'Nothing.' },
+    { id: 'exercise', title: 'Goes for a run', lvl: 0, watch: 'Heart rate ~140 with steps and a workout.',
+      patient: 'Exercising. No stress alert: the reader knows this is exercise.', family: 'Nothing.',
+      doctor: 'Later listed as "exercise correctly ignored".' },
+    { id: 'stress_spike', title: 'Stress spike', lvl: 1, watch: 'Heart rate ~40% above resting while sitting still, HRV down.',
+      patient: 'Stressed. Gentle nudge "Take 2 minutes" and a step-by-step plan.', family: 'Nothing: stress stays private.',
+      doctor: 'Nothing yet.' },
+    { id: 'sustained_distress', title: 'Distress', lvl: 2, watch: 'High heart rate and low HRV for 15+ minutes, not moving.',
+      patient: 'Distressed. Stronger nudge, grounding plan, "Are you okay?" check-in.',
+      family: 'Only if the patient switched on "Tell family when I\'m very stressed". Generic text, no numbers.',
+      doctor: 'A report: "strong stress episode".' },
+    { id: 'fall', title: 'Fall', lvl: 3, watch: 'Apple Watch fall detection fires.',
+      patient: 'Full-screen "Call 911" + 60 s "I\'m OK" countdown.',
+      family: '"Possible fall" after 60 s, unless the patient taps I\'m OK. Right away if they tap Call 911.',
+      doctor: 'A report: "possible fall".' },
+    { id: 'cardiac_warning', title: 'Cardiac warning', lvl: 3, watch: 'Heart rate ~160 at rest + chest pain reported.',
+      patient: 'Full-screen "Warning signs: Call 911".', family: '"Warning signs" alert immediately.',
+      doctor: 'A report: "cardiac warning signs".' },
+    { id: 'recovery', title: 'Recovery', lvl: 0, watch: 'Heart rate settles back down, HRV recovers.',
+      patient: 'Back to Calm. The nudge goes away.', family: 'No new alert.',
+      doctor: 'The episode shows up in the next report with how long it lasted.' },
+  ];
+  const LVL = ['Logged only', 'Patient nudge', 'Nudge + optional family', 'Emergency'];
+
+  $('stories').innerHTML = STORIES.map(s => `
+    <article class="card story" id="story-${s.id}">
+      <h3>${esc(s.title)} <span class="lvl lvl${s.lvl}">${LVL[s.lvl]}</span></h3>
+      <p class="small muted" style="margin:0">Watch: ${esc(s.watch)}</p>
+      <ul class="who">
+        <li><strong>Patient:</strong> ${esc(s.patient)}</li>
+        <li><strong>Family:</strong> ${esc(s.family)}</li>
+        <li><strong>Doctor:</strong> ${esc(s.doctor)}</li>
+      </ul>
+      <p class="result" id="res-${s.id}" hidden></p>
+      <button type="button" class="btn btn-primary" data-scenario="${s.id}">Play "${esc(s.title)}"</button>
+    </article>`).join('');
+
+  async function api(path, body) {
+    const res = await fetch(path, body === undefined ? {} : {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'HTTP ' + res.status);
+    return data;
+  }
+
+  document.querySelectorAll('[data-scenario]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.scenario;
+    b.disabled = true;
+    try {
+      const r = await api('/api/demo/scenario', { scenario: id });
+      const st = r.state;
+      const fam = !r.alert ? 'no family alert'
+        : r.alert.status === 'pending' ? 'family alert counting down (60 s)' : `family alerted (${r.alert.kind.replace('_', ' ')})`;
+      const text = `Result: ${st.state} (tier ${st.tier}) · ${fam} · ${r.report_created ? 'new doctor report' : 'no new doctor report'}`;
+      document.querySelectorAll('.story').forEach(c => c.classList.remove('ran'));
+      $('story-' + id).classList.add('ran');
+      $('res-' + id).hidden = false;
+      $('res-' + id).textContent = text;
+      log(`${id}: ${text}`);
+      refresh();
+    } catch (e) { log(`${id}: ERROR ${e.message}`); }
+    finally { b.disabled = false; }
+  });
+
+  const ACTION_LABELS = { im_ok: 'Patient tapped I\'m OK', call_911: 'Patient tapped Call 911 (demo: no real call)',
+    exercising: 'Patient said I\'m exercising', not_okay: 'Patient said I\'m not okay', chest_pain: 'Patient reported chest pain',
+    family_ack: 'Family acknowledged the newest alert' };
+  document.querySelectorAll('[data-action]').forEach(b => b.onclick = async () => {
+    try {
+      const r = await api('/api/demo/action', { action: b.dataset.action });
+      let extra = '';
+      if (r.cancelled_alerts) extra = ' · family alert cancelled';
+      if (r.family_alerted) extra = ' · family alerted now';
+      if (r.action === 'family_ack' && !r.acknowledged) extra = ' · no open alert to acknowledge';
+      if (r.state) extra += ` · state now ${r.state.state}`;
+      log(ACTION_LABELS[r.action] + extra);
+      refresh();
+    } catch (e) { log('ERROR ' + e.message); }
+  });
+
+  ['emergency_alerts', 'family_tier2_alerts'].forEach(k => $(k).onchange = async () => {
+    try {
+      await api('/api/demo/settings', { [k]: $(k).checked });
+      log(`Patient turned ${$(k).checked ? 'ON' : 'OFF'}: ${k === 'emergency_alerts' ? 'emergency alerts to family' : 'tell family when very stressed'}`);
+    } catch (e) { log('ERROR ' + e.message); }
+  });
+
+  $('reset').onclick = async () => {
+    await api('/api/demo/reset', {});
+    document.querySelectorAll('.story').forEach(c => c.classList.remove('ran'));
+    document.querySelectorAll('.result').forEach(r => { r.hidden = true; });
+    log('Demo reset: watch data, alerts and doctor reports cleared.');
+    refresh();
+  };
+
+  const openReports = new Set();
+  async function refresh() {
+    let d;
+    try { d = await api('/api/demo/overview'); } catch (e) { return; }
+    $('patientName').textContent = d.patient.name;
+    ['emergency_alerts', 'family_tier2_alerts'].forEach(k => { $(k).checked = !!d.settings[k]; });
+
+    // patient
+    const st = d.state;
+    $('pState').textContent = st ? st.state : 'no data';
+    $('pTier').innerHTML = st ? `<span class="lvl lvl${st.tier}">Tier ${st.tier}: ${LVL[st.tier]}</span>` : '';
+    const L = d.latest || {};
+    $('pVitals').textContent = L.heart_rate ? `Heart rate ${Math.round(L.heart_rate.value)} bpm · HRV ${L.hrv_sdnn ? Math.round(L.hrv_sdnn.value) : '-'} ms (only the patient sees these)` : '';
+    $('pNudge').innerHTML = d.nudge && d.nudge.tier < 3 ? `<div class="phone">🔔 ${esc(d.nudge.message)}</div>` : '';
+    if (st && st.state === 'emergency') {
+      let line = '';
+      if (d.pending_alert) {
+        const left = Math.max(0, Math.round((new Date(d.pending_alert.send_at) - Date.now()) / 1000));
+        line = left > 0 ? `Family will be alerted in ${left} s unless they tap I'm OK.` : 'Sending the family alert...';
+      }
+      $('pEmergency').innerHTML = `<div class="phone red"><strong>${st.kind === 'fall' ? 'Possible fall detected' : 'Warning signs detected'}</strong><br>
+        Big "Call 911" button + "I'm OK".<br>${esc(line)}</div>`;
+    } else {
+      $('pEmergency').innerHTML = '';
+    }
+
+    // family
+    $('fWho').textContent = d.family.members.length ? 'On the care team: ' + d.family.members.join(', ') : 'No family on the care team, so nobody gets alerts.';
+    $('fAlerts').innerHTML = d.family.alerts.length ? d.family.alerts.map(a => `
+      <li class="${a.acknowledged_at ? '' : 'new'}"><strong>${esc(a.label)}</strong> · ${time(a.created_at)}<br>
+        <span class="small">${esc(a.note)}</span><br>
+        <span class="small muted">${a.source === 'wearable' ? 'from the watch' : a.source === 'sos' ? 'patient pressed a button' : 'noticed in chat'}
+        · ${a.acknowledged_at ? 'seen by ' + esc(a.acknowledged_by) : 'not seen yet'}</span></li>`).join('')
+      : '<li class="muted">No alerts. All quiet.</li>';
+
+    // doctor
+    $('dWho').textContent = d.doctor.members.length ? 'On the care team: ' + d.doctor.members.join(', ') : 'No doctor on the care team.';
+    $('dReports').innerHTML = d.doctor.reports.length ? d.doctor.reports.map(r => `
+      <li><details data-id="${r.id}" ${openReports.has(String(r.id)) ? 'open' : ''}><summary><strong>${esc(r.title)}</strong></summary><pre>${esc(r.body)}</pre></details></li>`).join('')
+      : '<li class="muted">No reports yet.</li>';
+    $('dReports').querySelectorAll('details').forEach(el => el.ontoggle = () => {
+      el.open ? openReports.add(el.dataset.id) : openReports.delete(el.dataset.id);
+    });
+  }
+
+  refresh();
+  setInterval(refresh, 2000);
+})();
+</script>
+</body>
+</html>
