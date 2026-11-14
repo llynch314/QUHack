@@ -4,7 +4,7 @@ Importable:   generate(scenario, now) -> {"source": "simulator", "sent_at": ...,
 CLI (run from backend/):
   In-process, straight into the DB:   python -m wearable.simulator --patient 1 --scenario stress_spike
                                       python -m wearable.simulator --demo-patient --scenario fall
-  Over HTTP, exactly like the phone:  python -m wearable.simulator --url http://127.0.0.1:5000 --token <device token> --scenario exercise
+  Over HTTP, exactly like the phone:  python -m wearable.simulator --url http://127.0.0.1:5050 --token <device token> --scenario exercise
   Keep streaming every 30 s:          ... --every 30
 
 The same seed gives the same curves, so test runs are repeatable.
@@ -89,14 +89,17 @@ def _post_http(url, token, payload):
 def _run_in_process(patient_id, scenario, seed):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # backend/
     from app import app  # backend/app.py
-    from models import User
-    from . import service
+    from . import integrations, service
+    from .models import CONSENT_VERSION
+    from .security import utcnow
     with app.app_context():
-        if patient_id is None:   # --demo-patient: the DEV_LOGIN demo user
-            user = User.query.filter_by(google_sub='dev-demo-user').first()
-            if user is None:
-                return 1, {'error': 'No demo patient yet: start the app and open /wearable/dev-login/patient once.'}
-            patient_id = user.id
+        if patient_id is None:   # --demo-patient: the DEV_LOGIN demo patient (created if missing)
+            patient_id = integrations.demo_user('patient').id
+            profile = service.ensure_profile(patient_id)
+            if profile.consent_version != CONSENT_VERSION:   # demo account: accept the wearable consent
+                from models import db
+                profile.consent_version, profile.consent_at = CONSENT_VERSION, utcnow()
+                db.session.commit()
         result = service.run_scenario(patient_id, scenario, seed=seed)
     return 200, result
 
@@ -106,7 +109,7 @@ def main(argv=None):
     p.add_argument('--scenario', required=True, choices=SCENARIOS)
     p.add_argument('--patient', type=int, help='patient (user) id, writes straight to the local DB')
     p.add_argument('--demo-patient', action='store_true', help='use the DEV_LOGIN demo patient')
-    p.add_argument('--url', help='app base URL, e.g. http://127.0.0.1:5000 or your tunnel URL')
+    p.add_argument('--url', help='app base URL, e.g. http://127.0.0.1:5050 or your tunnel URL')
     p.add_argument('--token', help='device token from the My Watch page (with --url)')
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--every', type=int, default=0, help='repeat every N seconds (Ctrl+C to stop)')

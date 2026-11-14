@@ -135,7 +135,7 @@ def tokens_match(a, b):
 
 def https_mode():
     """strict: HTTPS always required. allow_localhost (default): plain HTTP only from this machine,
-    so you can test at http://127.0.0.1:5000. Everything else (LAN, tunnel over http) is rejected."""
+    so you can test at http://127.0.0.1:5050. Everything else (LAN, tunnel over http) is rejected."""
     return os.getenv('WEARABLE_REQUIRE_HTTPS', 'allow_localhost')
 
 

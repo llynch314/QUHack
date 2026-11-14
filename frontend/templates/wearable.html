@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}My Watch - Mind Connect{% endblock %}
+{% block title %}My Watch - AttuneMIND{% endblock %}
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/wearable.css') }}">
 
@@ -17,7 +17,8 @@
     <div class="box">
         <h2 id="emTitle">Possible emergency</h2>
         <p id="emText">If you are hurt or feel unwell, call 911 now.</p>
-        <a class="call" href="tel:911" id="emCall">Call 911</a>
+        <a class="call call911" href="tel:911" id="emCall">Call 911</a>
+        <p class="small" id="emCallNote" role="status" hidden></p>
         <button type="button" class="btn ok" id="emOk">I'm OK</button>
         <p class="count" id="emCount" aria-live="assertive"></p>
         <p class="small">AttuneMind does not call emergency services for you and cannot diagnose a heart attack.</p>
@@ -67,7 +68,7 @@
         </div>
         <details>
             <summary>Something feels physically wrong</summary>
-            <p class="small">If it's serious, <a href="tel:911"><strong>call 911</strong></a> first.</p>
+            <p class="small">If it's serious, <a class="call911" href="tel:911"><strong>call 911</strong></a> first.</p>
             <div class="row">
                 <button type="button" class="btn btn-ghost" data-symptom="chest_pain">Chest pain</button>
                 <button type="button" class="btn btn-ghost" data-symptom="cant_breathe">Can't breathe</button>
@@ -111,10 +112,11 @@
     <div class="row">
         <button type="button" class="btn btn-ghost" id="demoReset">Reset demo data</button>
         <button type="button" class="btn btn-ghost" id="makeReport">Generate provider report now</button>
-        <a class="btn btn-ghost" href="/wearable/dev-login/family" target="_blank" rel="noopener" title="Open in a private window to stay signed in here">Family view</a>
-        <a class="btn btn-ghost" href="/wearable/dev-login/provider" target="_blank" rel="noopener">Provider view</a>
     </div>
-    <p class="small muted">Tip: family/provider views share this browser's sign-in. Open them in a <strong>private/incognito window</strong> (or another browser) so you stay signed in as the patient here.</p>
+    <p class="small muted"><strong>See the other side:</strong> open a <strong>private/incognito window</strong> (Ctrl+Shift+N) and go to
+        <code>/wearable/dev-login/family</code> (family Alerts page) or <code>/wearable/dev-login/provider</code> (provider's view of this patient's documents).
+        Opening them in this window signs you out of the patient account. The demo family member and provider are already on this patient's Care Team.</p>
+    <p class="small muted">In DEMO_MODE the Call 911 button never places a real call.</p>
     <pre class="log" id="demoLog" aria-live="polite">Ready.</pre>
 </section>
 {% endif %}
@@ -146,7 +148,9 @@
             <span class="small muted">Off: family hear nothing about stress. On: a generic "consider checking in" message after a sustained episode. Never your numbers.</span></span></label>
         <label class="switch"><input type="checkbox" id="ai_explanations"><span><strong>Friendly AI explanations</strong>
             <span class="small muted">Only works on a paid / BAA AI tier. Sends only derived numbers, never your identity.</span></span></label>
-        <p class="small muted">Providers never get live alerts. They see wearable reports at your next appointment.</p>
+        <p class="small muted">Family see these alerts on their Alerts page. Providers never get live alerts: they see wearable reports in your health documents.
+            Choose who is on your team on the <a href="/care-team">Care Team</a> page.</p>
+        <p class="small" id="familyNote"></p>
         <p class="small" id="settingsStatus" role="status"></p>
     </section>
 </div>
@@ -175,7 +179,7 @@
 
 <section class="card stack w-section" id="reports" aria-labelledby="rep-h">
     <h2 id="rep-h" style="margin-top:0">Reports for my provider</h2>
-    <p class="small muted">Created automatically after a strong stress episode or emergency, or with the button in the demo panel. Your linked providers can read these.</p>
+    <p class="small muted">Created automatically after a strong stress episode or emergency, or with the button in the demo panel. Saved with your health documents (Care Team page), so the providers on your care team can read them.</p>
     <ul id="reportList"></ul>
     <div class="report-body" id="reportBody" hidden></div>
 </section>

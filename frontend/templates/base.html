@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mind Connect{% endblock %}</title>
+    <title>{% block title %}AttuneMIND{% endblock %}</title>
     <!-- Apply saved accessibility settings before paint, so the page doesn't flash. -->
     <script>
         try {
@@ -21,12 +21,20 @@
 
     <header class="site-header">
         <nav class="nav" aria-label="Main">
-            <a class="logo" href="{{ url_for('index') }}">Mind Connect</a>
+            <a class="logo" href="{{ url_for('index') }}">AttuneMIND</a>
             <ul class="nav-links">
+                {% if current_user and current_user.role == 'provider' %}
+                <li><a href="{{ url_for('care.provider_home') }}" {% if request.endpoint in ('care.provider_home', 'care.provider_patient') %}aria-current="page"{% endif %}>My Patients</a></li>
+                {% elif current_user and current_user.role == 'family' %}
+                <li><a href="{{ url_for('care.family_home') }}" {% if request.endpoint == 'care.family_home' %}aria-current="page"{% endif %}>Alerts</a></li>
+                <li><a href="{{ url_for('toolkit') }}" {% if request.endpoint == 'toolkit' %}aria-current="page"{% endif %}>Calm Toolkit</a></li>
+                {% else %}
                 <li><a href="{{ url_for('chat') }}" {% if request.endpoint == 'chat' %}aria-current="page"{% endif %}>Chat</a></li>
                 <li><a href="{{ url_for('toolkit') }}" {% if request.endpoint == 'toolkit' %}aria-current="page"{% endif %}>Calm Toolkit</a></li>
                 <li><a href="{{ url_for('report') }}" {% if request.endpoint == 'report' %}aria-current="page"{% endif %}>My Progress</a></li>
+                <li><a href="{{ url_for('care.care_team_page') }}" {% if request.endpoint == 'care.care_team_page' %}aria-current="page"{% endif %}>Care Team</a></li>
                 {# --- wearable --- #}<li><a href="{{ url_for('wearable.page') }}" {% if request.endpoint == 'wearable.page' %}aria-current="page"{% endif %}>My Watch</a></li>
+                {% endif %}
             </ul>
             <div class="nav-actions">
                 <details class="a11y-menu">
@@ -76,10 +84,11 @@
                 </details>
                 {% if current_user %}
                     <form method="post" action="{{ url_for('auth.logout') }}">
+                        <a class="muted" href="{{ url_for('auth.account') }}" {% if request.endpoint == 'auth.account' %}aria-current="page"{% endif %}>{{ current_user.role_label }} account</a>
                         <button class="btn btn-ghost" type="submit">Sign out</button>
                     </form>
                 {% else %}
-                    <a class="btn btn-primary" href="{{ url_for('auth.login', next=request.path) }}">Sign in with Google</a>
+                    <a class="btn btn-primary" href="{{ url_for('auth.signin', next=request.path) }}">Sign in</a>
                 {% endif %}
             </div>
         </nav>
@@ -98,7 +107,7 @@
     <footer class="site-footer">
         <p class="crisis-line"><strong>In crisis?</strong> In the US call or text <a href="tel:988">988</a>,
             text HOME to <a href="sms:741741">741741</a>, or call <a href="tel:911">911</a> in an emergency.</p>
-        <p>Mind Connect is a support tool, not a therapist or emergency service. <a href="{{ url_for('privacy') }}">Privacy &amp; disclosures</a></p>
+        <p>AttuneMIND is a support tool, not a therapist or emergency service. <a href="{{ url_for('privacy') }}">Privacy &amp; disclosures</a></p>
     </footer>
 
     <script src="{{ url_for('static', filename='js/a11y.js') }}"></script>

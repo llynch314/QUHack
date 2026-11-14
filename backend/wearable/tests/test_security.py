@@ -16,7 +16,7 @@ def test_db_columns_are_ciphertext(patient_client):
     patient_client.post('/api/wearable/self-report', json={'symptom': 'chest_pain'})   # event with meta
     patient_client.post(f'/api/patients/{patient_client.patient.id}/wearable-report')
     for table, col in (('wearable_vital_sample', 'value_enc'), ('wearable_event', 'meta_enc'),
-                       ('wearable_state_reading', 'reasons_enc'), ('wearable_report', 'body_enc')):
+                       ('wearable_state_reading', 'reasons_enc')):
         raw = [r[0] for r in db.session.execute(text(f'SELECT {col} FROM {table} WHERE {col} IS NOT NULL'))]
         assert raw, table
         for v in raw:
@@ -50,14 +50,15 @@ class FakeClient:
         self.calls = []
         outer = self
 
-        class Models:
-            def generate_content(self, model, contents):
-                outer.calls.append(contents)
-                return type('R', (), {'text': 'Your body seems a bit tense; a short breathing break could help.'})()
-        self.models = Models()
+        class Messages:
+            def create(self, model, max_tokens, messages):
+                outer.calls.append(messages[0]['content'])
+                block = type('B', (), {'type': 'text', 'text': 'Your body seems a bit tense; a short breathing break could help.'})()
+                return type('R', (), {'content': [block]})()
+        self.messages = Messages()
 
 
-def test_free_tier_never_calls_gemini(patient_client, monkeypatch):
+def test_free_tier_never_calls_ai(patient_client, monkeypatch):
     fake = FakeClient()
     monkeypatch.setattr(ai_explain, '_client_factory', lambda: fake)
     monkeypatch.setenv('AI_DATA_TIER', 'free')
@@ -74,7 +75,7 @@ def test_paid_tier_sends_only_derived_fields(patient_client, monkeypatch):
     r = patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'stress_spike'}).json
     assert len(fake.calls) == 1
     prompt = fake.calls[0]
-    assert 'Demo User' not in prompt and 'example.com' not in prompt and '2026-' not in prompt
+    assert 'Demo Patient' not in prompt and 'example.com' not in prompt and '2026-' not in prompt
     assert 'hr_pct_above_rest' in prompt and "'hr':" not in prompt
     assert r['state']['explanation'].startswith('Your body seems a bit tense')
     log = AIUsageLog.query.one()
@@ -109,5 +110,5 @@ def test_no_vitals_in_logs_during_full_simulator_run(patient_client, caplog):
     assert 'wearable' in logs   # we did log something
     leaked = [v for v in values if re.search(rf'(?<![\d.]){re.escape(v)}(?![\d])', logs)]
     assert leaked == []
-    for word in ('heart_rate', 'hrv', 'chest_pain', 'Demo User'):
+    for word in ('heart_rate', 'hrv', 'chest_pain', 'Demo Patient'):
         assert word not in logs

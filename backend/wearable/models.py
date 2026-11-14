@@ -111,7 +111,8 @@ class WearableNudge(db.Model):
 
 
 class WearableAlert(db.Model):
-    """Standalone fallback for the team's Alert model (replaced after the roles merge).
+    """The wearable side of a family alert: the "I'm OK" countdown. When it is sent, a row in the
+    team's Alert table is created (alert_id) so family see it on their normal Alerts page.
     status: pending (Tier 3 fall countdown) -> open -> acknowledged, or cancelled ("I'm OK")."""
     __tablename__ = 'wearable_alert'
     id = db.Column(db.Integer, primary_key=True)
@@ -125,33 +126,13 @@ class WearableAlert(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow, index=True)
     ack_at = db.Column(db.DateTime(timezone=True))
     ack_by = db.Column(db.Integer)
+    alert_id = db.Column(db.Integer, index=True)   # Alert.id once sent to family
 
     def to_dict(self):
         return {'id': self.id, 'patient_id': self.patient_id, 'tier': self.tier, 'kind': self.kind,
                 'note': self.note, 'source': self.source, 'status': self.status,
                 'send_at': _iso(self.send_at), 'created_at': _iso(self.created_at),
                 'ack_at': _iso(self.ack_at), 'ack_by': self.ack_by}
-
-
-class WearableReport(db.Model):
-    """Standalone fallback for HealthDocument(category="wearable_report")."""
-    __tablename__ = 'wearable_report'
-    id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer, nullable=False, index=True)
-    title = db.Column(db.String(200), nullable=False)
-    body_enc = db.Column(EncryptedText, nullable=False)
-    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, index=True)
-
-
-class WearableCareLink(db.Model):
-    """Standalone stand-in for the team's CareLink, so family/provider access can be
-    demoed and tested on this branch. Replaced by CareLink after the roles merge."""
-    __tablename__ = 'wearable_care_link'
-    id = db.Column(db.Integer, primary_key=True)
-    patient_id = db.Column(db.Integer, nullable=False, index=True)
-    member_user_id = db.Column(db.Integer, nullable=False, index=True)
-    role = db.Column(db.String(16), nullable=False)   # family | provider
-    created_at = db.Column(db.DateTime(timezone=True), default=utcnow)
 
 
 class AuditLog(db.Model):

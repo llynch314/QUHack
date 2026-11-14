@@ -1,4 +1,4 @@
-# Core dependencies for the Flask app (app.py), the Gemini chatbot and emotion detection.
+# Core dependencies for the Flask app (app.py), the Claude chatbot and emotion detection.
 # Install with:  pip install -r requirements.txt   (or: make setup)
 
 # Web server
@@ -6,7 +6,10 @@ flask~=3.1
 python-dotenv~=1.0
 flask-sock~=0.7           # websocket for voice mode (Gemini Live relay)
 
-# Gemini (text chat, webcam expression check, Live voice)
+# Claude (text chat, webcam expression check)
+anthropic>=1.0
+
+# Gemini Live (voice mode only - Claude has no real-time audio API)
 google-genai~=3.3
 
 # Sign in with Google
@@ -20,8 +23,10 @@ flask-sqlalchemy~=3.1
 opencv-python>=4.9
 numpy>=1.26
 
+# Tests (run `pytest` from backend/)
+pytest>=8
+
 # --- wearable ---
 cryptography>=43          # Fernet field encryption for wearable data at rest
 qrcode>=8.0               # device-pairing QR code (SVG, no Pillow needed)
-pytest>=8.0               # pytest backend/wearable/tests
 # --- end wearable ---

@@ -1,9 +1,9 @@
 """Ingest, devices, access rules, escalation and patient rights (PRD §5A.6, §6.6, §8)."""
 from datetime import datetime, timedelta, timezone
 
-from models import User, db
+from models import Alert, HealthDocument, User, db
 from wearable import escalation, security, simulator
-from wearable.models import AuditLog, VitalSample, WearableAlert, WearableNudge, WearableReport
+from wearable.models import AuditLog, VitalSample, WearableAlert, WearableNudge
 
 
 def iso(dt=None):
@@ -170,7 +170,7 @@ def test_provider_cannot_read_vitals_but_can_read_report(patient_client, provide
     assert AuditLog.query.filter_by(actor_id=provider_client.user.id, outcome='denied').count() >= 1
     rep = patient_client.post(f'/api/patients/{pid}/wearable-report').json['report']
     listed = provider_client.get('/api/wearable/reports')
-    assert listed.status_code == 200 and listed.json['reports'][0]['category'] == 'wearable_report'
+    assert listed.status_code == 200 and listed.json['reports'][0]['category'] == 'wearable-report'
     r = provider_client.get(f'/api/wearable/reports/{rep["id"]}')
     assert r.status_code == 200 and '# Wearable report' in r.json['report']['body']
 
@@ -182,13 +182,13 @@ def test_provider_never_gets_alerts(patient_client, provider_client):
 
 def test_family_cannot_read_reports(patient_client, family_client):
     patient_client.post(f'/api/patients/{patient_client.patient.id}/wearable-report')
-    rep = WearableReport.query.first()
+    rep = HealthDocument.query.filter_by(category='wearable-report').first()
     assert family_client.get('/api/wearable/reports').status_code == 403
     assert family_client.get(f'/api/wearable/reports/{rep.id}').status_code == 403
 
 
 def test_unlinked_patient_cannot_read_other_patient(app, patient_client):
-    other = User(google_sub='other2', name='Other')
+    other = User(google_sub='other2', name='Other', terms_accepted_at=datetime.now(timezone.utc))
     db.session.add(other)
     db.session.commit()
     c = app.test_client()
@@ -265,8 +265,9 @@ def test_one_open_alert_per_kind_within_15_min(patient_client):
 def test_report_auto_generated_after_tier2_or_3(patient_client):
     patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'exercise'})
     patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'fall'})
-    rep = WearableReport.query.one()
-    assert 'possible fall' in rep.body_enc and 'Exercise correctly ignored' in rep.body_enc
+    rep = HealthDocument.query.filter_by(category='wearable-report').one()
+    assert 'possible fall' in rep.body and 'Exercise correctly ignored' in rep.body
+    assert rep.title.endswith('(possible fall)')
 
 
 # ---------- demo mode, idle logoff ----------
@@ -320,10 +321,93 @@ def test_delete_leaves_only_audit(patient_client, device_token):
 
 def test_pages_render_for_each_role(app, patient_client):
     assert b'Demo Control Panel' in patient_client.get('/wearable').data
-    for role, marker in (('family', b'Family alerts'), ('provider', b'Wearable reports')):
-        c = app.test_client()
-        c.get(f'/wearable/dev-login/{role}')
-        assert marker in c.get('/wearable').data
+    fam = app.test_client()
+    assert fam.get('/wearable/dev-login/family').headers['Location'].endswith('/family')
+    assert fam.get('/wearable').headers['Location'].endswith('/family')
+    page = fam.get('/family').data
+    assert b'Demo Patient' in page   # already on the demo patient's care team
+    prov = app.test_client()
+    loc = prov.get('/wearable/dev-login/provider').headers['Location']
+    assert loc.endswith(f'/provider/patients/{patient_client.patient.id}')
+    assert prov.get(loc).status_code == 200   # profile filled in, consent done, linked
+
+
+# ---------- integration with the team's roles / alerts / documents ----------
+
+def test_family_sees_watch_alert_on_team_alerts_page(patient_client, family_client):
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'cardiac_warning'})
+    alerts = family_client.get('/api/alerts').json['alerts']
+    assert len(alerts) == 1 and alerts[0]['source'] == 'wearable' and alerts[0]['kind'] == 'cardiac_warning'
+    assert alerts[0]['label'] == 'Warning signs (watch)' and not any(ch.isdigit() for ch in alerts[0]['note'].replace('911', ''))
+    # acknowledging on the team page shows up on the patient's watch page
+    assert family_client.post(f'/api/alerts/{alerts[0]["id"]}/acknowledge').status_code == 200
+    state = patient_client.get(f'/api/patients/{patient_client.patient.id}/state').json
+    assert state['last_family_alert']['status'] == 'acknowledged'
+    # and the patient sees it next to their other alerts
+    assert patient_client.get('/api/alerts').json['alerts'][0]['source'] == 'wearable'
+
+
+def test_fall_alert_reaches_team_page_without_patient_page_open(patient_client, family_client, monkeypatch):
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'fall'})
+    assert family_client.get('/api/alerts').json['alerts'] == []
+    monkeypatch.setattr(escalation, 'utcnow', lambda: datetime.now(timezone.utc) + timedelta(seconds=61))
+    import wearable
+    monkeypatch.setattr(wearable, 'PROMOTE_EVERY_S', 0)
+    alerts = family_client.get('/api/alerts').json['alerts']   # only the family page is polling
+    assert len(alerts) == 1 and alerts[0]['kind'] == 'fall'
+
+
+def test_call_911_alerts_family_right_away(patient_client, family_client):
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'fall'})
+    r = patient_client.post('/api/wearable/emergency/call').json
+    assert r['family_alerted'] == 1 and r['family_count'] == 1 and r['demo_mode'] is True
+    assert family_client.get('/api/alerts').json['alerts'][0]['kind'] == 'fall'
+    assert AuditLog.query.filter_by(action='write_emergency_call').count() == 1
+
+
+def test_no_family_on_care_team_is_reported(patient_client):
+    from models import CareLink
+    state = patient_client.get(f'/api/patients/{patient_client.patient.id}/state').json
+    assert state['family_count'] == 1   # demo login puts Demo Family member on the care team
+    CareLink.query.delete()
+    db.session.commit()
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'cardiac_warning'})
+    state = patient_client.get(f'/api/patients/{patient_client.patient.id}/state').json
+    assert state['family_count'] == 0
+
+
+def test_removed_family_member_loses_access(patient_client, family_client):
+    from models import CareLink
+    CareLink.query.filter_by(member_id=family_client.user.id).delete()
+    db.session.commit()
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'cardiac_warning'})
+    assert family_client.get('/api/alerts').json['alerts'] == []
+    assert family_client.get('/api/wearable/alerts').json['alerts'] == []
+
+
+def test_provider_sees_report_in_health_documents(patient_client, provider_client):
+    pid = patient_client.patient.id
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'fall'})
+    docs = provider_client.get(f'/api/patients/{pid}/documents').json['documents']
+    assert any(d['category'] == 'wearable-report' and 'possible fall' in d['title'] for d in docs)
+    assert provider_client.get('/api/alerts').status_code == 403   # providers never get alerts
+
+
+def test_deleting_account_deletes_wearable_data(patient_client):
+    pid = patient_client.patient.id
+    patient_client.post('/api/wearable/demo/scenario', json={'scenario': 'fall'})
+    assert patient_client.post('/api/me/delete').status_code == 200
+    assert VitalSample.query.filter_by(patient_id=pid).count() == 0
+    assert WearableAlert.query.filter_by(patient_id=pid).count() == 0
+    assert Alert.query.filter_by(patient_id=pid).count() == 0
+
+
+def test_old_demo_accounts_get_their_role_fixed(app):
+    db.session.add(User(google_sub='dev-demo-family', name='Old', email='x@example.com'))   # role defaults to patient
+    db.session.commit()
+    c = app.test_client()
+    assert c.get('/wearable/dev-login/family').status_code == 302
+    assert User.query.filter_by(google_sub='dev-demo-family').one().role == 'family'
 
 
 def test_simulator_cli_dry_run(capsys):

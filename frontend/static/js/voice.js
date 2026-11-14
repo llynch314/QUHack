@@ -2,15 +2,11 @@
 (function () {
     const startBtn = document.getElementById('voiceStart');
     const stopBtn = document.getElementById('voiceStop');
-    const modelSel = document.getElementById('voiceModel');
-    const thinkingRow = document.getElementById('thinkingRow');
-    const thinkingSel = document.getElementById('thinkingLevel');
     const status = document.getElementById('voiceStatus');
     const level = document.getElementById('voiceLevel');
 
-    modelSel.addEventListener('change', () => { thinkingRow.hidden = modelSel.value !== 'extended'; });
 
-    let ws = null, micStream = null, recordCtx = null, playCtx = null;
+    let ws = null, micStream = null, recordCtx = null, playCtx = null, frameTimer = null;
     let playTime = 0, playing = [];
     let current = null;   // transcript bubble being filled: { who, el, text }
 
@@ -80,9 +76,8 @@
         const recorder = new AudioWorkletNode(recordCtx, 'pcm-recorder');
         source.connect(recorder);
 
-        const params = new URLSearchParams({ mode: modelSel.value, thinking: thinkingSel.value });
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        ws = new WebSocket(`${proto}//${location.host}/ws/voice?${params}`);
+        ws = new WebSocket(`${proto}//${location.host}/ws/voice`);
         ws.binaryType = 'arraybuffer';
         setStatus('Connecting to Gemini...');
 
@@ -94,7 +89,18 @@
         ws.onmessage = e => {
             if (typeof e.data !== 'string') { playPcm(e.data); return; }
             const msg = JSON.parse(e.data);
-            if (msg.type === 'ready') { setStatus('Listening - go ahead and talk.'); stopBtn.disabled = false; }
+            if (msg.type === 'ready') {
+                window.MC.voiceActive = true;
+                setStatus('Listening - go ahead and talk.');
+                stopBtn.disabled = false;
+                // While the camera is on, Gemini Live sees ~1 frame per second to read your expression.
+                frameTimer = setInterval(() => {
+                    const frame = window.MC.camera && window.MC.camera.grabFrame(320, 0.7);
+                    if (frame && ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'frame', data: frame.split(',')[1] }));
+                    }
+                }, 1000);
+            }
             else if (msg.type === 'transcript') transcript(msg.who, msg.text);
             else if (msg.type === 'turn_complete') { finishBubble(); setStatus('Listening...'); }
             else if (msg.type === 'interrupted') { stopPlayback(); finishBubble(); }
@@ -106,6 +112,9 @@
     }
 
     function cleanup() {
+        clearInterval(frameTimer);
+        frameTimer = null;
+        window.MC.voiceActive = false;
         finishBubble();
         stopPlayback();
         if (micStream) micStream.getTracks().forEach(t => t.stop());

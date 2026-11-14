@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Chat - Mind Connect{% endblock %}
+{% block title %}Chat - AttuneMIND{% endblock %}
 {% block content %}
 <h1>Talk it through</h1>
-<p class="notice">You're chatting with an AI, not a person or a therapist. Your messages are sent to Google's Gemini AI
-    to create replies and aren't saved by Mind Connect. Please leave out names, addresses and other identifying details.
+<p class="notice">You're chatting with an AI, not a person or a therapist. Your messages are sent to Anthropic's Claude AI
+    (and, in voice mode, to Google's Gemini AI) to create replies and aren't saved by AttuneMIND. Please leave out names, addresses and other identifying details.
     <a href="{{ url_for('privacy') }}">Learn more</a></p>
 
 <div id="crisisPanel" class="crisis-panel" role="alert" hidden>
@@ -35,19 +35,6 @@
         <section class="card" aria-labelledby="voice-heading">
             <h2 id="voice-heading">Talk out loud</h2>
             <p class="muted">Have a spoken conversation. Headphones work best.</p>
-            <label for="voiceModel">Mode</label>
-            <select id="voiceModel">
-                <option value="standard">Gemini 3.8 Live (fast)</option>
-                <option value="extended">Gemini 3.8 Live Extended Thinking (more thoughtful)</option>
-            </select>
-            <div id="thinkingRow" hidden style="margin-top:8px">
-                <label for="thinkingLevel">Thinking depth</label>
-                <select id="thinkingLevel">
-                    <option value="low">Low (quicker)</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High (slower, deeper)</option>
-                </select>
-            </div>
             <div class="row" style="margin-top:12px">
                 <button type="button" id="voiceStart" class="btn btn-primary">Start talking</button>
                 <button type="button" id="voiceStop" class="btn" disabled>Stop</button>
@@ -58,8 +45,9 @@
 
         <section class="card" aria-labelledby="cam-heading">
             <h2 id="cam-heading">Expression check (optional)</h2>
-            <p class="muted">If you turn this on, a camera snapshot is sent to Gemini every few seconds so replies can take
-                your expression into account. Nothing is saved. It's a rough guess, not a diagnosis.</p>
+            <p class="muted">If you turn this on, camera snapshots are sent to the AI (Claude in text chat, Gemini while talking out loud) so replies can take your expression
+                into account: every 5 seconds in text chat, and about once a second while you're talking out loud.
+                Nothing is saved, and it never identifies you. It's a rough guess, not a diagnosis.</p>
             <label class="row"><input type="checkbox" id="camToggle"> Use my camera</label>
             <video id="webcam" autoplay playsinline muted hidden></video>
             <p id="camStatus" class="status" role="status"></p>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Sign in - AttuneMIND{% endblock %}
+{% block content %}
+<h1>Sign in</h1>
+<p class="muted">Choose how you use AttuneMIND. Your Google account keeps the type you pick the first time you sign in.</p>
+
+<div class="grid">
+    <article class="card feature stack">
+        <div class="icon" aria-hidden="true">🌱</div>
+        <h2>I'm using AttuneMIND</h2>
+        <p>Chat, use the Calm Toolkit, track your progress, and choose who on your care team can see what.</p>
+        <div><a class="btn btn-primary" href="{{ url_for('auth.login', role='patient', next=next) }}">Sign in</a></div>
+    </article>
+    <article class="card feature stack">
+        <div class="icon" aria-hidden="true">🩺</div>
+        <h2>I'm a health provider</h2>
+        <p>See the health documents your patients choose to share with you, and add your own notes.</p>
+        <div><a class="btn btn-primary" href="{{ url_for('auth.login', role='provider') }}">Provider sign-in</a></div>
+    </article>
+    <article class="card feature stack">
+        <div class="icon" aria-hidden="true">🏠</div>
+        <h2>I'm a family member</h2>
+        <p>Get alerted if someone who added you has a panic attack, meltdown or crisis, so you can check in.</p>
+        <div><a class="btn btn-primary" href="{{ url_for('auth.login', role='family') }}">Family sign-in</a></div>
+    </article>
+</div>
+
+<p class="notice" style="margin-top:24px">Providers and family members only see someone's information after that person adds them to their care team, and lose access as soon as they're removed.</p>
+{% if not google_configured and dev_login_enabled %}
+    <p class="muted">Demo mode: each button signs in to a demo account for that type.</p>
+{% endif %}
+{% endblock %}

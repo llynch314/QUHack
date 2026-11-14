@@ -46,7 +46,7 @@
     }
 
     // ---------- live state ----------
-    let shownNudge = null, emergencyKey = null, countdownTimer = null;
+    let shownNudge = null, emergencyKey = null, countdownTimer = null, familyCount = 0;
 
     function renderState(d) {
         const st = d.state;
@@ -90,6 +90,10 @@
             $('nudge').hidden = true;
         }
 
+        familyCount = d.family_count || 0;
+        if ($('familyNote')) $('familyNote').textContent = familyCount ? `${familyCount} family member(s) on your care team will get alerts.`
+            : 'No family member is on your care team yet, so nobody receives alerts. Add one on the Care Team page.';
+
         // emergency overlay
         const isEm = st && st.state === 'emergency';
         const pending = d.pending_alert;
@@ -98,10 +102,12 @@
             $('emergency').hidden = false;
             $('emTitle').textContent = st.kind === 'fall' ? 'Possible fall detected' : 'Warning signs detected';
             $('emText').textContent = st.explanation;
-            if (emergencyKey !== key) { emergencyKey = key; $('emCall').focus(); }
+            if (emergencyKey !== key) { emergencyKey = key; $('emCallNote').hidden = true; $('emCall').focus(); }
             clearInterval(countdownTimer);
             const tick = () => {
-                if (pending && pending.send_at) {
+                if (!familyCount && st.kind) {
+                    $('emCount').textContent = 'No family member is on your care team, so nobody will be alerted. Call 911 if you need help.';
+                } else if (pending && pending.send_at) {
                     const left = Math.max(0, Math.round((new Date(pending.send_at) - Date.now()) / 1000));
                     $('emCount').textContent = left > 0 ? `If you don't tap "I'm OK", your family will be alerted in ${left} s.`
                         : 'Your family is being alerted.';
@@ -172,6 +178,24 @@
     $('btnExercising').onclick = () => act('/api/wearable/feedback', { correction: 'exercising' }, "I'm exercising");
     $('btnNotOkay').onclick = () => act('/api/wearable/feedback', { correction: 'not_okay' }, "I'm not okay");
     $('emOk').onclick = () => act('/api/wearable/feedback', { correction: 'im_ok' }, "I'm OK");
+
+    // Call 911: on a real phone the tel: link dials. In DEMO_MODE, or on a computer (which can't
+    // place calls), we never dial and say so instead. Either way family are alerted right away.
+    const isPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    document.querySelectorAll('.call911').forEach(a => a.addEventListener('click', async ev => {
+        const dials = isPhone && !window.W_DEMO;
+        if (!dials) ev.preventDefault();
+        let r = null;
+        try { r = await api('/api/wearable/emergency/call', { method: 'POST' }); } catch (e) { /* still show the note */ }
+        const fam = !r ? '' : r.family_alerted ? ' Your family has been alerted now.'
+            : r.family_count ? '' : ' No family member is on your care team, so nobody was alerted.';
+        const msg = window.W_DEMO ? 'Demo mode: no real call was placed. On a phone this button dials 911.' + fam
+            : dials ? 'Calling 911...' + fam : "This computer can't place calls: call 911 from your phone now." + fam;
+        log('Call 911 tapped' + (dials ? ' (dialing)' : ' (not dialed)') + (r && r.family_alerted ? ', family alerted now' : ''));
+        const note = $('emCallNote');
+        if (!$('emergency').hidden) { note.textContent = msg; note.hidden = false; } else { alert(msg); }
+        refreshState(false);
+    }));
     document.querySelectorAll('[data-symptom]').forEach(b => {
         b.onclick = () => act('/api/wearable/self-report', { symptom: b.dataset.symptom }, 'Self-report ' + b.dataset.symptom);
     });

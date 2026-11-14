@@ -53,7 +53,7 @@ def login_as(client, role):
     """Use the DEV_LOGIN helper: role is patient | family | provider."""
     r = client.get(f'/wearable/dev-login/{role}')
     assert r.status_code == 302, r.data
-    return User.query.filter_by(google_sub='dev-demo-user' if role == 'patient' else f'dev-demo-{role}').first()
+    return User.query.filter_by(google_sub=f'dev-demo-{role}').first()
 
 
 @pytest.fixture()

@@ -3,6 +3,7 @@
 The API key stays on the server. Browser <-> /ws/voice protocol:
   browser -> server  binary: 16 kHz mono 16-bit PCM microphone audio
                      text:   {"type": "text", "text": "..."}  (typed message)
+                             {"type": "frame", "data": "<base64 JPEG>"}  (camera, ~1 per second)
                              {"type": "stop"}
   server -> browser  binary: 24 kHz mono 16-bit PCM audio from Gemini
                      text:   {"type": "ready" | "turn_complete" | "interrupted" | "crisis"}
@@ -10,35 +11,30 @@ The API key stays on the server. Browser <-> /ws/voice protocol:
                              {"type": "error", "message": "..."}
 """
 import asyncio
+import base64
 import json
 import logging
 
-from flask import request
 from flask_sock import Sock
 from google.genai import types
 from simple_websocket import ConnectionClosed
 
-from gemini_client import (
-    LIVE_MODEL, LIVE_THINKING_MODEL, SYSTEM_PROMPT, VOICE_PROMPT_SUFFIX, get_client, mentions_crisis,
-)
+from gemini_client import LIVE_MODEL, get_client
+from prompts import SYSTEM_PROMPT, VOICE_PROMPT_SUFFIX, mentions_crisis
 
 log = logging.getLogger(__name__)
 sock = Sock()
 
-THINKING_LEVELS = {'low', 'medium', 'high'}  # MINIMAL is not supported on extended thinking
+MAX_FRAME_BYTES = 1_000_000   # camera frames are ~20-40 KB; Live rejects frames over 2 MB
 
 
-def live_config(extended, level):
-    config = {
+def live_config():
+    return {
         'response_modalities': ['AUDIO'],          # Live models only reply with audio
         'system_instruction': SYSTEM_PROMPT + VOICE_PROMPT_SUFFIX,
         'input_audio_transcription': {},           # text of what the user said
         'output_audio_transcription': {},          # text of what Gemini said
     }
-    # thinking_level must be omitted for gemini-3.8-live (reasoning is built in).
-    if extended:
-        config['thinking_config'] = {'thinking_level': level if level in THINKING_LEVELS else 'medium'}
-    return config
 
 
 def _send_json(ws, **payload):
@@ -47,11 +43,8 @@ def _send_json(ws, **payload):
 
 @sock.route('/ws/voice')
 def voice_socket(ws):
-    extended = request.args.get('mode') == 'extended'
-    level = request.args.get('thinking', 'medium')
-    model = LIVE_THINKING_MODEL if extended else LIVE_MODEL
     try:
-        asyncio.run(_relay(ws, model, live_config(extended, level)))
+        asyncio.run(_relay(ws, LIVE_MODEL, live_config()))
     except ConnectionClosed:
         pass
     except Exception as e:  # report to the browser instead of failing silently
@@ -81,6 +74,15 @@ async def _relay(ws, model, config):
                 data = json.loads(msg)
                 if data.get('type') == 'stop':
                     return
+                if data.get('type') == 'frame' and data.get('data'):
+                    # Camera snapshot (JPEG, base64) so the Live model can see the user's expression.
+                    try:
+                        jpeg = base64.b64decode(data['data'], validate=True)
+                    except ValueError:
+                        continue
+                    if jpeg[:3] == b'\xff\xd8\xff' and len(jpeg) <= MAX_FRAME_BYTES:
+                        await session.send_realtime_input(video=types.Blob(data=jpeg, mime_type='image/jpeg'))
+                    continue
                 if data.get('type') == 'text' and data.get('text'):
                     text = str(data['text'])[:2000]
                     if mentions_crisis(text):

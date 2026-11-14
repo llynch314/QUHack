@@ -2,13 +2,15 @@
 AttuneMind wearable helper for Windows (no `make` needed). Run from the repo root:
 
   .\scripts\wearable.ps1 setup            venv + dependencies + backend/.env ready for demo testing
-  .\scripts\wearable.ps1 test             run the wearable test suite (pytest)
+  .\scripts\wearable.ps1 test             run the team's tests + the wearable tests (pytest)
   .\scripts\wearable.ps1 run [-Port 5050] start the app with DEMO_MODE=1 and DEV_LOGIN=1, open My Watch
                                           (port 5000 is reserved by Windows on some PCs, so 5050 is the default)
   .\scripts\wearable.ps1 sim <scenario>   push a scenario straight into the DB for the demo patient
                                           (baseline, exercise, stress_spike, sustained_distress, fall, cardiac_warning, recovery)
   .\scripts\wearable.ps1 send -Url <url> -Token <token> [-Hr 72]
                                           send one reading like the iPhone Shortcut does
+  .\scripts\wearable.ps1 live [calm]      LIVE DEMO FEED: streams watch readings every 5 s into the running app;
+                                          type stress / exercise / fall / hr 110 / {json} ... (type help)
   .\scripts\wearable.ps1 tunnel           start a Cloudflare quick tunnel to the app (HTTPS URL for the phone)
   .\scripts\wearable.ps1 status           show the wearable configuration
   .\scripts\wearable.ps1 reset-db         delete the local SQLite database (asks first)
@@ -45,7 +47,7 @@ switch ($Command) {
     }
     'test' {
         Need-Venv
-        Push-Location $Root; try { & $Py -m pytest backend/wearable/tests -q } finally { Pop-Location }
+        Push-Location $Backend; try { & $Py -m pytest tests wearable/tests -q } finally { Pop-Location }
     }
     'run' {
         Need-Venv
@@ -64,6 +66,10 @@ switch ($Command) {
         Need-Venv
         if (-not $Token) { throw 'Pass -Token <device token> (create one on the My Watch page).' }
         Push-Location $Backend; try { & $Py -m wearable.devtool send --url $Url --token $Token --hr $Hr } finally { Pop-Location }
+    }
+    'live' {
+        Need-Venv
+        Push-Location $Backend; try { & $Py -m wearable.live --url $Url --mode $Scenario.Replace('baseline', 'calm') } finally { Pop-Location }
     }
     'tunnel' {
         if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {

@@ -1,18 +1,27 @@
 """AttuneMind wearable integration (PRD §6). Self-contained package; see integrations.py
-for the single place that talks to teammates' auth / alerts / documents.
+for the single place that talks to the team's roles / care team / alerts / documents.
 
-Wire-up in app.py (before db.create_all()):
+Wire-up in app.py (after the blueprints, before db.create_all()):
     from wearable import init_wearable
     init_wearable(app)
 """
 import logging
 import os
+import time
 
 log = logging.getLogger('mindconnect.wearable')
 
+PROMOTE_EVERY_S = 2
+
 
 def init_wearable(app):
+    from flask import request
+    from sqlalchemy import event
+
+    from models import User
+
     from . import models  # noqa: F401  (registers the wearable_* tables before db.create_all)
+    from .escalation import promote_due_alerts
     from .routes import bp
     from .security import get_fernet
 
@@ -21,6 +30,28 @@ def init_wearable(app):
         # Turn on when you browse through the HTTPS tunnel. Plain http://127.0.0.1 sign-in stops working.
         app.config['SESSION_COOKIE_SECURE'] = True
     app.register_blueprint(bp)
+
+    last = {'t': 0.0}
+
+    @app.before_request
+    def _send_due_fall_alerts():
+        """Fall countdowns end on time even if the patient closed the page: any request
+        (e.g. the family Alerts page polling) sends alerts whose 60 s are up."""
+        if request.endpoint == 'static' or time.monotonic() - last['t'] < PROMOTE_EVERY_S:
+            return
+        last['t'] = time.monotonic()
+        try:
+            promote_due_alerts()
+        except Exception:   # never break the rest of the app over this
+            log.exception('wearable: sending due alerts failed')
+
+    @event.listens_for(User, 'before_delete')
+    def _delete_wearable_data(mapper, connection, user):
+        """Deleting an account (main's delete_user_everywhere) also deletes its wearable data."""
+        for table in models.db.metadata.sorted_tables:
+            if table.name.startswith('wearable_') and table.name != 'wearable_audit_log' \
+                    and 'patient_id' in table.c:
+                connection.execute(table.delete().where(table.c.patient_id == user.id))
 
     @app.context_processor
     def _wearable_ctx():

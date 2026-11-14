@@ -1,28 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mind Connect</title>
-    <link rel="stylesheet" href="mind_connect.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>attunemind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6EDCF; --header:#A9B99B; --ink:#2A3626; --ink-soft:#52604B;
+  --surface:#FCF8E8; --line:#D6CBA6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1E211B; --header:#4B5A45; --ink:#EEE9DC; --ink-soft:#BCC4B2;
+    --surface:#2A2E25; --line:#475040; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1E211B; --header:#4B5A45; --ink:#EEE9DC; --ink-soft:#BCC4B2;
+  --surface:#2A2E25; --line:#475040; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; min-height:100vh; background:var(--bg); color:var(--ink);
+  font-family:"Outfit",sans-serif;
+  display:flex; flex-direction:column;
+}
+.bar{
+  position:relative; display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+  background:var(--header); padding:.9rem 1.25rem;
+}
+.brand{font-weight:600; font-size:1.35rem; letter-spacing:.01em; margin:0; text-align:center}
+.page-label{justify-self:end; font-style:italic; font-weight:500; font-size:1.05rem}
+.menu-btn{
+  justify-self:start; width:44px; height:44px; display:grid; place-content:center; gap:5px;
+  background:none; border:0; border-radius:10px; cursor:pointer; color:inherit;
+}
+.menu-btn span{display:block; width:24px; height:2.5px; background:var(--ink); border-radius:2px}
+.menu-btn:hover{background:rgba(255,255,255,.2)}
+:focus-visible{outline:3px solid var(--ink); outline-offset:2px}
+.menu{
+  position:absolute; top:calc(100% - .35rem); left:1.25rem; z-index:5; min-width:200px;
+  margin:0; padding:.4rem; list-style:none; background:var(--surface);
+  border:1.5px solid var(--line); border-radius:14px;
+}
+.menu[hidden]{display:none}
+.menu a{display:block; padding:.7rem .9rem; border-radius:9px; color:var(--ink); text-decoration:none; font-weight:500}
+.menu a:hover{background:var(--bg)}
+main{
+  flex:1; width:100%; max-width:1000px; margin:0 auto; padding:3rem 1.5rem 3.5rem;
+  display:grid; grid-template-columns:1fr minmax(240px,300px); gap:3rem; align-items:stretch;
+}
+.left{display:flex; flex-direction:column; justify-content:space-between; gap:3rem}
+.hello{margin:0; font-weight:400; font-size:1.5rem; color:var(--ink-soft)}
+.name{margin:.1em 0 0; font-weight:600; font-size:clamp(3rem,9vw,5.5rem); line-height:1; letter-spacing:-.01em}
+blockquote{
+  margin:0; max-width:30ch; padding:.2rem 0 .2rem 1.25rem;
+  border-left:3px solid var(--header);
+  font-size:1.2rem; line-height:1.55;
+}
+.right{display:flex; flex-direction:column; align-items:center; gap:1.25rem}
+.capsule{
+  width:100%; max-width:300px; min-height:440px; flex:1;
+  display:flex; flex-direction:column; overflow:hidden;
+  border:2px solid var(--ink); border-radius:150px; background:var(--surface);
+}
+.fill{
+  flex:0 0 56%; display:grid; place-items:center; background:var(--mood);
+  font-weight:600; font-size:1.3rem; color:#22301E; border-bottom:2px solid var(--ink);
+  transition:background-color .35s ease;
+}
+.meaning{
+  flex:1; display:flex; align-items:center; justify-content:center; text-align:center;
+  padding:1rem 1.75rem 1.75rem; font-size:1rem; line-height:1.55;
+}
+.picker{display:flex; gap:.6rem}
+.dot{
+  width:36px; height:36px; border-radius:50%; background:var(--c); cursor:pointer;
+  border:2px solid transparent; box-shadow:0 0 0 2px var(--bg);
+}
+.dot[aria-pressed="true"]{border-color:var(--ink); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--ink-soft)}
+.hint{margin:0; font-size:.9rem; color:var(--ink-soft)}
+@media (max-width:720px){
+  main{grid-template-columns:1fr; padding-top:2rem}
+  .left{gap:2rem}
+  .capsule{min-height:400px}
+}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
 </head>
 <body>
-    <!-- Floating Chatbot Button -->
-    <button id="chatButton" class="chat-button">Chat with our Bot</button>
+<header class="bar">
+  <button class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
+    <span></span><span></span><span></span>
+  </button>
+  <p class="brand">attune<strong>mind</strong></p>
+  <span class="page-label">dashboard</span>
+  <ul class="menu" id="menu" hidden>
+    <li><a href="/test">Dashboard</a></li>
+    <li><a href="/report">Mood history</a></li>
+    <li><a href="/account">Settings</a></li>
+    <li><a href="/chat">Chatbot</a></li>
+  </ul>
+</header>
 
-    <!-- Chatbot Popup -->
-    <div id="chatPopup" class="chat-popup">
-        <div class="chat-header">
-            <h3>AI Chatbot</h3>
-            <button id="closeChat" class="close-btn">X</button>
-        </div>
-        <div id="chatContent" class="chat-content">
-            <!-- Chat messages will appear here -->
-        </div>
-        <input type="text" id="userInput" placeholder="Type your message...">
-        <button id="sendMessage" class="send-btn">Send</button>
+<main>
+  <section class="left" aria-label="Welcome">
+    <div>
+      <p class="hello">Hello,</p>
+      <h1 class="name" id="userName">Loading...</h1>
     </div>
+    <blockquote id="inspirationalQuote"></blockquote>
+  </section>
 
-    <script src="chatbot.js"></script>
+  <section class="right" aria-label="Your mood color">
+    <div class="capsule" id="capsule" style="--mood:#8FB08A">
+      <div class="fill" id="moodName">Green</div>
+      <p class="meaning" id="moodMeaning" aria-live="polite">Green means you feel calm and steady. Everything feels okay.</p>
+    </div>
+    <div class="picker" role="group" aria-label="Pick your mood color">
+      <button class="dot" style="--c:#E8C24A" data-name="Yellow" data-color="#E8C24A" aria-pressed="false" aria-label="Yellow"></button>
+      <button class="dot" style="--c:#8FB08A" data-name="Green" data-color="#8FB08A" aria-pressed="true" aria-label="Green"></button>
+      <button class="dot" style="--c:#7F9FC4" data-name="Blue" data-color="#7F9FC4" aria-pressed="false" aria-label="Blue"></button>
+      <button class="dot" style="--c:#D4705F" data-name="Red" data-color="#D4705F" aria-pressed="false" aria-label="Red"></button>
+      <button class="dot" style="--c:#A58BC0" data-name="Purple" data-color="#A58BC0" aria-pressed="false" aria-label="Purple"></button>
+    </div>
+    <p class="hint">Tap a color to match how you feel.</p>
+  </section>
+</main>
+
+<script>
+(function(){
+
+  var quotes = [
+  "Small steps still move you forward.",
+  "You don't have to have it all figured out today.",
+  "Progress is progress, no matter how small.",
+  "Be kind to yourself as you grow."
+];
+
+var quote = quotes[Math.floor(Math.random() * quotes.length)];
+document.getElementById("inspirationalQuote").textContent = "“" + quote + "”";
+  var userName = document.getElementById("userName");
+  fetch("/api/me")
+    .then(function(response){
+      if(!response.ok) throw new Error("Could not load the signed-in user.");
+      return response.json();
+    })
+    .then(function(user){
+      if(typeof user.name !== "string" || !user.name.trim()) {
+        throw new Error("The signed-in user has no display name.");
+      }
+      userName.textContent = user.name;
+    })
+    .catch(function(error){
+      userName.textContent = "Unable to load your name";
+      console.error("Could not load the signed-in user's name.", error);
+    });
+
+  var meanings = {
+    Yellow:"Yellow means you feel happy and full of energy. It feels bright, like the sun.",
+    Green:"Green means you feel calm and steady. Everything feels okay.",
+    Blue:"Blue means you feel quiet or a little sad. It is okay to slow down and rest.",
+    Red:"Red means you have strong feelings, like anger or worry. Try taking a deep breath.",
+    Purple:"Purple means you feel dreamy and thoughtful. Your mind is busy with big ideas."
+  };
+  var capsule = document.getElementById("capsule");
+  var nameEl = document.getElementById("moodName");
+  var textEl = document.getElementById("moodMeaning");
+  var dots = document.querySelectorAll(".dot");
+  dots.forEach(function(d){
+    d.addEventListener("click", function(){
+      dots.forEach(function(o){ o.setAttribute("aria-pressed", o === d ? "true" : "false"); });
+      capsule.style.setProperty("--mood", d.dataset.color);
+      nameEl.textContent = d.dataset.name;
+      textEl.textContent = meanings[d.dataset.name];
+    });
+  });
+
+  var btn = document.getElementById("menuBtn");
+  var menu = document.getElementById("menu");
+  function setMenu(open){
+    menu.hidden = !open;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    btn.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+  }
+  btn.addEventListener("click", function(e){ e.stopPropagation(); setMenu(menu.hidden); });
+  document.addEventListener("click", function(e){ if(!menu.hidden && !menu.contains(e.target)) setMenu(false); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !menu.hidden){ setMenu(false); btn.focus(); } });
+})();
+</script>
 </body>
 </html>

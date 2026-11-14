@@ -11,7 +11,7 @@ from flask import (Blueprint, Response, abort, g, jsonify, redirect, render_temp
 from models import User, db
 
 from . import escalation, integrations, service, simulator
-from .models import CONSENT_VERSION, _iso, WearableAlert, WearableDevice, WearableNudge, WearableReport
+from .models import CONSENT_VERSION, _iso, WearableAlert, WearableDevice, WearableNudge
 from .security import (MAX_INGEST_BYTES, audit, check_idle, demo_mode, hash_token, https_rejection, ingest_limiter,
                        new_device_token, request_is_secure, transport_allowed, utcnow)
 
@@ -105,28 +105,31 @@ def _base_url():
 @signed_in
 def page():
     role = integrations.get_role(g.user)
-    if role == 'family':
-        return render_template('wearable_family.html')
-    if role == 'provider':
-        return render_template('wearable_provider.html')
+    if role == 'family':      # family see watch alerts on the team's Alerts page
+        return redirect(url_for('care.family_home'))
+    if role == 'provider':    # providers see watch reports as health documents on My Patients
+        return redirect(url_for('care.provider_home'))
     return render_template('wearable.html', demo_mode=demo_mode(), patient_id=g.user.id,
                            consent_version=CONSENT_VERSION)
 
 
 @bp.route('/wearable/dev-login/<role>')
 def dev_login(role):
-    """DEV_LOGIN=1 only. One click to become the demo patient, family member or provider."""
+    """DEV_LOGIN=1 only. One click to become the demo patient, family member or provider.
+    Uses the same demo accounts as the normal sign-in (/login?role=...), but skips the consent
+    screen and links family + provider to the demo patient's care team, so every view works at once."""
     if os.getenv('DEV_LOGIN') != '1' or role not in integrations.ROLES:
         abort(404)
-    patient = User.query.filter_by(google_sub='dev-demo-user').first()
-    if patient is None:
-        patient = User(google_sub='dev-demo-user', name='Demo User', email='demo@example.com')
-        db.session.add(patient)
-        db.session.commit()
-    user = patient if role == 'patient' else integrations.get_or_create_demo_member(role, patient)
+    for r in ('family', 'provider'):   # the demo care team always exists, whoever signs in first
+        integrations.demo_user(r)
+    user = integrations.demo_user(role)
     session.clear()
     session['user_id'] = user.id
     session.permanent = True
+    if role == 'family':
+        return redirect(url_for('care.family_home'))
+    if role == 'provider':
+        return redirect(url_for('care.provider_patient', patient_id=integrations.demo_user('patient').id))
     return redirect(url_for('wearable.page'))
 
 
@@ -293,6 +296,16 @@ def feedback():
     return jsonify(result)
 
 
+@bp.post('/api/wearable/emergency/call')
+@patient_only
+def emergency_call():
+    """The patient tapped Call 911 on the emergency screen. The phone dials 911 itself (tel: link);
+    here we skip the "I'm OK" countdown and alert family right away. In DEMO_MODE no call is made."""
+    sent = escalation.send_now(g.user.id)
+    audit('write_emergency_call', g.user.id)
+    return jsonify(family_alerted=sent, family_count=integrations.family_count(g.user.id), demo_mode=demo_mode())
+
+
 @bp.post('/api/wearable/self-report')
 @patient_only
 def self_report():
@@ -352,8 +365,15 @@ def make_report(patient_id):
         return _err('You can only generate your own report.', 403)
     rep = service.generate_report(patient_id)
     audit('write_report', patient_id, resource=f'report:{rep.id}')
-    return jsonify(report={'id': rep.id, 'title': rep.title, 'body': rep.body_enc,
-                           'created_at': _iso(rep.created_at)}), 201
+    return jsonify(report=_report_json(rep)), 201
+
+
+def _report_json(rep, with_body=True):
+    out = {'id': rep.id, 'patient_id': rep.patient_id, 'title': rep.title, 'category': rep.category,
+           'created_at': _iso(rep.created_at)}
+    if with_body:
+        out['body'] = rep.body
+    return out
 
 
 def _report_patients():
@@ -372,27 +392,25 @@ def list_reports():
     if not ids:
         audit('read_reports', None, outcome='denied', resource=request.path)
         return _err('Only the patient and their providers can read wearable reports.', 403)
-    rows = WearableReport.query.filter(WearableReport.patient_id.in_(ids)).order_by(WearableReport.id.desc()).limit(50)
-    names = {u.id: u.name for u in User.query.filter(User.id.in_(ids))}
+    rows = integrations.reports_for(ids)
+    names = {u.id: u.display_name for u in User.query.filter(User.id.in_(ids))}
     for pid in ids:
         audit('read_reports', pid)
-    return jsonify(reports=[{'id': r.id, 'patient_id': r.patient_id, 'patient_name': names.get(r.patient_id),
-                             'title': r.title, 'category': 'wearable_report',
-                             'created_at': _iso(r.created_at)} for r in rows])
+    return jsonify(reports=[{**_report_json(r, with_body=False), 'patient_name': names.get(r.patient_id)}
+                            for r in rows])
 
 
 @bp.get('/api/wearable/reports/<int:report_id>')
 @signed_in
 def get_report(report_id):
-    rep = db.session.get(WearableReport, report_id)
+    rep = integrations.get_report(report_id)
     if rep is None:
         return _err('Not found.', 404)
     if not integrations.can_view_reports(g.user, rep.patient_id):
         audit('read_report', rep.patient_id, outcome='denied', resource=f'report:{rep.id}')
         return _err("You don't have access to this report.", 403)
     audit('read_report', rep.patient_id, resource=f'report:{rep.id}')
-    return jsonify(report={'id': rep.id, 'patient_id': rep.patient_id, 'title': rep.title, 'body': rep.body_enc,
-                           'category': 'wearable_report', 'created_at': _iso(rep.created_at)})
+    return jsonify(report=_report_json(rep))
 
 
 # ---------- alerts (family + patient; providers never) ----------
@@ -413,7 +431,10 @@ def list_alerts():
     if request.args.get('unacknowledged') == '1':
         q = q.filter(WearableAlert.status == 'open')
     rows = q.order_by(WearableAlert.id.desc()).limit(50).all()
-    names = {u.id: u.name for u in User.query.filter(User.id.in_(ids))} if ids else {}
+    if any([integrations.sync_ack(a) for a in rows]):
+        db.session.commit()
+        rows = [a for a in rows if request.args.get('unacknowledged') != '1' or a.status == 'open']
+    names = {u.id: u.display_name for u in User.query.filter(User.id.in_(ids))} if ids else {}
     for pid in ids:
         audit('read_alerts', pid)
     return jsonify(alerts=[{**a.to_dict(), 'patient_name': names.get(a.patient_id)} for a in rows])
@@ -426,9 +447,7 @@ def ack_alert(alert_id):
     if a is None or not integrations.can_view_alerts(g.user, a.patient_id):
         audit('write_alert_ack', a.patient_id if a else None, outcome='denied')
         return _err('Not found.', 404)
-    if a.status == 'open':
-        a.status, a.ack_at, a.ack_by = 'acknowledged', utcnow(), g.user.id
-        db.session.commit()
+    integrations.acknowledge(a, g.user)
     audit('write_alert_ack', a.patient_id, resource=f'alert:{a.id}')
     return jsonify(alert=a.to_dict())
 

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Alerts - AttuneMIND{% endblock %}
+{% block content %}
+<h1>Alerts</h1>
+<p class="muted">You'll see an alert here if someone who added you ({{ current_user.email }}) to their care team has a panic attack, meltdown or crisis, or asks you to check in. You can't see their chats or health records.</p>
+
+{% if links %}
+    <p>Watching over: {% for l in links %}<strong>{{ l.patient.display_name }}</strong>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+{% else %}
+    <div class="card"><p>No one has added you yet. Ask them to add <strong>{{ current_user.email }}</strong> on their AttuneMIND Care Team page.</p></div>
+{% endif %}
+
+<div id="alerts" class="stack" aria-live="polite"></div>
+
+<section class="card stack" style="margin-top:16px">
+    <h2>When you get an alert</h2>
+    <ul>
+        <li>Reach out calmly: a call or text saying you're there helps.</li>
+        <li>For a panic attack, breathe slowly together: in for 4, out for 6.</li>
+        <li>If they might be in danger, call or text <a href="tel:988">988</a>, or call <a href="tel:911">911</a> in an emergency.</li>
+    </ul>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+    const box = document.getElementById('alerts');
+    let known = null;
+
+    function render(alerts) {
+        box.replaceChildren();
+        if (!alerts.length) {
+            const p = document.createElement('p');
+            p.className = 'card';
+            p.textContent = 'No alerts. All quiet.';
+            box.appendChild(p);
+            return;
+        }
+        for (const a of alerts) {
+            const card = document.createElement('article');
+            card.className = a.acknowledged_at ? 'card' : 'card crisis-panel';
+            const h = document.createElement('h2');
+            h.textContent = `${a.label}: ${a.patient.name}`;
+            const when = document.createElement('p');
+            when.textContent = `${new Date(a.created_at).toLocaleString()} · ${a.source === 'sos' ? 'they pressed the alert button' : a.source === 'wearable' ? 'from their watch' /* wearable */ : 'noticed in chat'}`;
+            card.append(h, when);
+            if (a.note) {
+                const note = document.createElement('p');
+                note.textContent = a.note;
+                card.appendChild(note);
+            }
+            if (a.acknowledged_at) {
+                const seen = document.createElement('p');
+                seen.className = 'muted';
+                seen.textContent = `Seen by ${a.acknowledged_by}`;
+                card.appendChild(seen);
+            } else {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-primary';
+                btn.textContent = "I've seen this and I'm checking in";
+                btn.addEventListener('click', async () => {
+                    await fetch(`/api/alerts/${a.id}/acknowledge`, { method: 'POST' });
+                    load();
+                });
+                card.appendChild(btn);
+            }
+            box.appendChild(card);
+        }
+    }
+
+    async function load() {
+        const res = await fetch('/api/alerts');
+        if (!res.ok) return;
+        const { alerts } = await res.json();
+        const newest = alerts.length ? alerts[0].id : 0;
+        if (known !== null && newest > known) {
+            document.title = '(!) New alert - AttuneMIND';
+            if (MC.readAloudOn && MC.readAloudOn()) MC.speak(`New alert: ${alerts[0].label} for ${alerts[0].patient.name}`);
+        }
+        known = newest;
+        render(alerts);
+    }
+
+    load();
+    setInterval(load, 5000);   // check for new alerts every 5 seconds (wearable: falls need to show up fast)
+</script>
+{% endblock %}

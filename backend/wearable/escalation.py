@@ -94,15 +94,28 @@ def handle(patient_id, reading, profile, now=None, patient_name=None):
 
 
 def promote_due_alerts(now=None):
-    """Open pending fall alerts whose 60 s countdown expired. Called on every poll."""
+    """Send pending fall alerts whose "I'm OK" countdown ended. Runs before every request
+    (see __init__.py), so it works even if the patient's tab is closed."""
     now = now or utcnow()
     due = [a for a in WearableAlert.query.filter_by(status='pending').all() if as_utc(a.send_at) <= now]
     for a in due:
-        a.status = 'open'
+        integrations.publish_alert(a)
         log.info('wearable family alert sent after countdown: alert=%s patient=%s', a.id, a.patient_id)
     if due:
         db.session.commit()
     return len(due)
+
+
+def send_now(patient_id, now=None):
+    """Patient pressed Call 911: skip the countdown and alert family right away."""
+    now = now or utcnow()
+    pending = WearableAlert.query.filter_by(patient_id=patient_id, status='pending').all()
+    for a in pending:
+        a.send_at = now
+        integrations.publish_alert(a)
+    if pending:
+        db.session.commit()
+    return len(pending)
 
 
 def cancel_pending(patient_id):

@@ -1,13 +1,13 @@
-"""Facial expression reading with Gemini (gemini-3.8-flash by default).
+"""Facial expression reading with Claude (claude-opus-5-5 by default).
 
 Returns one of DeepFace's old 7 labels so the rest of the app is unchanged.
 """
+import base64
 import json
 
 import cv2
-from google.genai import types
 
-from gemini_client import CHAT_MODEL, get_client
+from claude_client import CHAT_MODEL, FALLBACK_BETA, get_client, reply_text
 
 EMOTIONS = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
 
@@ -16,20 +16,19 @@ PROMPT = (
     "clearly visible face, answer none."
 )
 
-_CONFIG = types.GenerateContentConfig(
-    temperature=0,
-    response_mime_type='application/json',
-    response_schema={
-        'type': 'OBJECT',
-        'properties': {'emotion': {'type': 'STRING', 'enum': EMOTIONS + ['none']}},
+_FORMAT = {
+    'type': 'json_schema',
+    'schema': {
+        'type': 'object',
+        'properties': {'emotion': {'type': 'string', 'enum': EMOTIONS + ['none']}},
         'required': ['emotion'],
+        'additionalProperties': False,
     },
-    thinking_config=types.ThinkingConfig(thinking_level='low'),
-)
+}
 
 
 class NoFaceDetected(ValueError):
-    """Raised when Gemini sees no face in the image."""
+    """Raised when Claude sees no face in the image."""
 
 
 def detect_emotion(img_bytes, mime_type='image/png'):
@@ -37,19 +36,28 @@ def detect_emotion(img_bytes, mime_type='image/png'):
 
     Raises NoFaceDetected if there is no face, ValueError on an unexpected answer.
     """
-    response = get_client().models.generate_content(
+    response = get_client().beta.messages.create(
         model=CHAT_MODEL,
-        contents=[PROMPT, types.Part.from_bytes(data=img_bytes, mime_type=mime_type)],
-        config=_CONFIG,
+        max_tokens=1024,
+        messages=[{'role': 'user', 'content': [
+            {'type': 'image', 'source': {
+                'type': 'base64', 'media_type': mime_type,
+                'data': base64.standard_b64encode(img_bytes).decode('ascii')}},
+            {'type': 'text', 'text': PROMPT},
+        ]}],
+        output_config={'effort': 'low', 'format': _FORMAT},
+        betas=[FALLBACK_BETA],
+        fallbacks='default',
     )
+    text = reply_text(response)
     try:
-        emotion = str(json.loads(response.text)['emotion']).strip().lower()
+        emotion = str(json.loads(text)['emotion']).strip().lower()
     except (TypeError, ValueError, KeyError):
         emotion = ''
     if emotion == 'none':
         raise NoFaceDetected("No face detected")
     if emotion not in EMOTIONS:
-        raise ValueError(f"Unexpected Gemini response: {response.text!r}")
+        raise ValueError(f"Unexpected Claude response: {text!r}")
     return emotion
 
 

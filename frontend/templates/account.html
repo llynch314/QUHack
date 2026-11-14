@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}My Account - AttuneMIND{% endblock %}
+{% block content %}
+<h1>My account</h1>
+
+<section class="card stack" aria-labelledby="who-h">
+    <h2 id="who-h">Signed in as</h2>
+    <p><strong>{{ current_user.display_name }}</strong>{% if current_user.email %} · {{ current_user.email }}{% endif %}</p>
+    <p class="muted">Account type: {{ current_user.role_label }}. Your name and email come from your Google account.</p>
+</section>
+
+{% if current_user.role == 'provider' %}
+{% set form = request.form if error else current_user %}
+<section class="card stack" aria-labelledby="profile-h" style="margin-top:16px">
+    <h2 id="profile-h">Provider profile</h2>
+    <p class="muted">Patients see this on their Care Team page, so they know who they're sharing their health documents with.
+        It's self-reported: AttuneMIND doesn't verify it.</p>
+    {% if error %}<p class="notice" role="alert">{{ error }}</p>{% endif %}
+    <form method="post" action="{{ url_for('auth.account', next=next) if next else url_for('auth.account') }}" class="stack">
+        <label for="organization">Hospital, clinic or practice <span class="muted">(required)</span></label>
+        <input type="text" id="organization" name="organization" maxlength="200" required
+               value="{{ form.organization or '' }}" placeholder="e.g. City General Hospital">
+        <label for="specialty">Role or specialty</label>
+        <input type="text" id="specialty" name="specialty" maxlength="120"
+               value="{{ form.specialty or '' }}" placeholder="e.g. Psychiatrist, Therapist (LCSW)">
+        <label for="license_number">Licence or NPI number <span class="muted">(optional)</span></label>
+        <input type="text" id="license_number" name="license_number" maxlength="60"
+               value="{{ form.license_number or '' }}">
+        <div><button type="submit" class="btn btn-primary">Save profile</button></div>
+    </form>
+</section>
+{% endif %}
+
+<section class="card stack" aria-labelledby="data-h" style="margin-top:16px">
+    <h2 id="data-h">Delete my account</h2>
+    {% if current_user.role == 'patient' %}
+        <p>This permanently deletes your account, check-ins, expression readings, health documents and alerts,
+            and removes everyone from your care team.</p>
+    {% elif current_user.role == 'provider' %}
+        <p>This permanently deletes your account and removes you from every patient's care team. Notes you wrote stay
+            in your patients' records with your name, so their history stays complete.</p>
+    {% else %}
+        <p>This permanently deletes your account and removes you from every care team. You'll stop getting alerts.</p>
+    {% endif %}
+    <div><button type="button" class="btn" id="deleteBtn">Delete my account</button></div>
+    <p id="deleteStatus" role="status"></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+    document.getElementById('deleteBtn').addEventListener('click', async () => {
+        if (!confirm('Permanently delete your account? This cannot be undone.')) return;
+        const res = await fetch('/api/me/delete', { method: 'POST' });
+        if (res.ok) location.href = '/';
+        else document.getElementById('deleteStatus').textContent = 'Could not delete your account. Please try again.';
+    });
+</script>
+{% endblock %}

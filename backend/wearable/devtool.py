@@ -2,9 +2,9 @@
 
   python -m wearable.devtool env          Create/complete backend/.env for local demo testing (never overwrites values you set)
   python -m wearable.devtool status       Show the wearable configuration that the app will use
-  python -m wearable.devtool send --url http://127.0.0.1:5000 --token TOKEN [--hr 72]
+  python -m wearable.devtool send --url http://127.0.0.1:5050 --token TOKEN [--hr 72]
                                           Send one reading exactly like the iPhone Shortcut does (flat format)
-  python -m wearable.devtool reset-db     Delete backend/instance/mindconnect.db (fresh start; asks first)
+  python -m wearable.devtool reset-db     Delete backend/instance/attunemind.db (fresh start; asks first)
 """
 import argparse
 import os
@@ -82,7 +82,7 @@ def cmd_status(_args):
     print(f"WEARABLE_REQUIRE_HTTPS:   {show('WEARABLE_REQUIRE_HTTPS', 'allow_localhost')}")
     print(f"PUBLIC_BASE_URL:          {show('PUBLIC_BASE_URL', '(not set)')}")
     print(f"NTFY_TOPIC (watch buzz):  {'set' if show('NTFY_TOPIC') else '(not set)'}")
-    print(f"GEMINI_API_KEY set:       {bool(show('GEMINI_API_KEY')) and show('GEMINI_API_KEY') != 'your_key_here'}  (not needed for the wearable demo)")
+    print(f"ANTHROPIC_API_KEY set:    {bool(show('ANTHROPIC_API_KEY')) and show('ANTHROPIC_API_KEY') != 'your_key_here'}  (Chat needs it; the wearable demo does not)")
     print(f"cloudflared on PATH:      {shutil.which('cloudflared') is not None}")
 
 
@@ -101,7 +101,7 @@ def cmd_send(args):
 
 
 def cmd_reset_db(args):
-    path = os.path.join(BACKEND, 'instance', 'mindconnect.db')
+    path = os.path.join(BACKEND, 'instance', 'attunemind.db')
     if not os.path.exists(path):
         print('No database file to delete.')
         return 0

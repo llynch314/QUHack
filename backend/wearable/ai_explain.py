@@ -1,6 +1,7 @@
-"""Optional friendly explanation from Gemini (PRD §5A.4).
+"""Optional friendly explanation from Claude, through main's shared client (claude_client.py) (PRD §5A.4).
 
-- Off automatically when AI_DATA_TIER=free (Google may train on free-tier data).
+- Off automatically when AI_DATA_TIER=free (the default): wearable data stays on our server until
+  the team confirms its AI account terms (paid / BAA) cover health data.
 - Off when the patient switched AI explanations off.
 - Never for emergencies: the Call 911 text is always the fixed, rule-based one.
 - Sends ONLY derived, de-identified numbers. No name, email, IDs, timestamps or raw vitals.
@@ -23,7 +24,7 @@ _client_factory = None   # tests can inject a fake client
 def _get_client():
     if _client_factory is not None:
         return _client_factory()
-    from gemini_client import get_client   # main's shared Gemini client (google-genai)
+    from claude_client import get_client   # main's shared Claude client (ANTHROPIC_API_KEY)
     return get_client()
 
 
@@ -37,14 +38,15 @@ def maybe_explain(patient_id, reading, profile):
     fallback = reading['explanation']
     if not ai_allowed_for_wearable() or not profile.ai_explanations or reading['tier'] not in (1, 2):
         return fallback
-    model = os.getenv('GEMINI_CHAT_MODEL', 'gemini-3.8-flash')
+    model = os.getenv('CLAUDE_CHAT_MODEL', 'claude-opus-5-5')
     data = derived_payload(reading)
     prompt = ('You are a gentle wellbeing companion. In ONE short, warm sentence (max 25 words), explain to the user '
               'what these body signals suggest and invite them to take a 2-minute calming break. Do not diagnose, '
               f'do not mention numbers you were not given. Signals: {data}')
     try:
-        resp = _get_client().models.generate_content(model=model, contents=prompt)
-        text = (getattr(resp, 'text', '') or '').strip()
+        resp = _get_client().messages.create(model=model, max_tokens=120,
+                                             messages=[{'role': 'user', 'content': prompt}])
+        text = ''.join(getattr(b, 'text', '') for b in resp.content if getattr(b, 'type', '') == 'text').strip()
     except Exception:
         log.warning('wearable: AI explanation failed, using rule-based text (patient=%s)', patient_id)
         text = ''

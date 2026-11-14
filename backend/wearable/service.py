@@ -12,14 +12,15 @@ from models import User, db
 from . import escalation, integrations, reader, report, simulator
 from .ai_explain import maybe_explain
 from .models import (AIUsageLog, StateReading, VitalSample, WearableAlert, WearableDevice, WearableEvent,
-                     WearableNudge, WearableProfile, WearableReport)
+                     WearableNudge, WearableProfile)
 from .security import MAX_SAMPLES, as_utc, utcnow
 
 log = logging.getLogger('mindconnect.wearable')
 
 REPLAY_WINDOW = timedelta(minutes=10)
 FUTURE_SKEW = timedelta(minutes=5)
-REPORT_DEDUPE = timedelta(minutes=15)
+REPORT_DEDUPE = timedelta(minutes=15)          # after a strong stress episode
+EMERGENCY_REPORT_DEDUPE = timedelta(minutes=2)  # falls / cardiac warnings always reach the provider
 PLAUSIBLE = {
     'heart_rate': (20, 260), 'hrv_sdnn': (1, 400), 'resting_hr': (25, 150), 'steps': (0, 100000),
     'active_energy': (0, 10000), 'workout_active': (0, 1),
@@ -189,15 +190,24 @@ def evaluate(patient_id, now=None):
     patient = db.session.get(User, patient_id)
     result = escalation.handle(patient_id, reading, profile, now, patient_name=patient.name if patient else None)
     if result['report_due']:
-        last = WearableReport.query.filter_by(patient_id=patient_id).order_by(WearableReport.id.desc()).first()
-        if last is None or now - as_utc(last.created_at) > REPORT_DEDUPE:
-            generate_report(patient_id, now)
+        last = integrations.last_report_time(patient_id)
+        gap = EMERGENCY_REPORT_DEDUPE if reading['tier'] >= 3 else REPORT_DEDUPE
+        if last is None or now - last > gap:
+            generate_report(patient_id, now, reason=_report_reason(reading))
     alert = result['alert'].to_dict() if result['alert'] else None
     return {**reading, 'ts': now.isoformat()}, alert
 
 
-def generate_report(patient_id, now=None):
+def _report_reason(reading):
+    if reading['tier'] >= 3:
+        return 'possible fall' if reading.get('kind') == 'fall' else 'cardiac warning signs'
+    return 'strong stress episode'
+
+
+def generate_report(patient_id, now=None, reason=None):
     title, body = report.build_report(patient_id, now=now)
+    if reason:
+        title = f'{title} ({reason})'
     return integrations.save_provider_report(patient_id, title, body)
 
 
@@ -229,6 +239,8 @@ def latest_state(patient_id):
     pending = WearableAlert.query.filter_by(patient_id=patient_id, status='pending').order_by(WearableAlert.id.desc()).first()
     recent_alert = WearableAlert.query.filter_by(patient_id=patient_id).filter(WearableAlert.status != 'cancelled') \
         .order_by(WearableAlert.id.desc()).first()
+    if recent_alert is not None and integrations.sync_ack(recent_alert):
+        db.session.commit()
     nudge = WearableNudge.query.filter_by(patient_id=patient_id, seen_at=None).order_by(WearableNudge.id.desc()).first()
     state = None
     if r:
@@ -240,6 +252,7 @@ def latest_state(patient_id):
             'pending_alert': pending.to_dict() if pending else None,
             'last_family_alert': recent_alert.to_dict() if recent_alert else None,
             'nudge': nudge.to_dict() if nudge else None,
+            'family_count': integrations.family_count(patient_id),
             'server_time': utcnow().isoformat()}
 
 
@@ -296,7 +309,7 @@ def privacy_summary(patient_id):
         'encryption': {'at_rest': 'Fernet (AES-128-CBC + HMAC-SHA256)', 'key_source': KEY_SOURCE,
                        'in_transit': 'HTTPS / TLS via Cloudflare Tunnel', 'https_mode': https_mode()},
         'audit': [a.to_dict() for a in viewers],
-        'ai': {'provider': 'Google Gemini', 'model': os.getenv('GEMINI_CHAT_MODEL', 'gemini-3.8-flash'),
+        'ai': {'provider': 'Anthropic Claude', 'model': os.getenv('CLAUDE_CHAT_MODEL', 'claude-opus-5-5'),
                'tier': tier, 'enabled_for_wearable': ai_allowed_for_wearable() and profile.ai_explanations,
                'used_to_train': None if tier == 'free' else False,
                'fields_sent': ['hr_pct_above_rest', 'hrv_pct_below', 'movement', 'state'],
@@ -324,8 +337,8 @@ def export_data(patient_id):
         'states': [{'state': r.state, 'kind': r.kind, 'confidence': r.confidence, 'ts': iso(r.ts),
                     **(r.reasons_enc or {})} for r in StateReading.query.filter_by(patient_id=patient_id)],
         'alerts': [a.to_dict() for a in WearableAlert.query.filter_by(patient_id=patient_id)],
-        'reports': [{'title': r.title, 'body': r.body_enc, 'created_at': iso(r.created_at)}
-                    for r in WearableReport.query.filter_by(patient_id=patient_id)],
+        'reports': [{'title': r.title, 'body': r.body, 'created_at': iso(r.created_at)}
+                    for r in integrations.reports_for([patient_id], limit=1000)],
         'audit_log': [a.to_dict() for a in AuditLog.query.filter_by(patient_id=patient_id).order_by(AuditLog.id)],
     }
 
@@ -334,9 +347,11 @@ def delete_all(patient_id, keep_profile=False, keep_devices=False):
     """Removes samples, events, states, devices, nudges, alerts, reports and the profile.
     The append-only audit log is kept (it records the deletion itself)."""
     counts = {}
-    for model in (VitalSample, WearableEvent, StateReading, WearableNudge, WearableAlert, WearableReport,
+    for model in (VitalSample, WearableEvent, StateReading, WearableNudge, WearableAlert,
                   AIUsageLog) + (() if keep_devices else (WearableDevice,)):
         counts[model.__tablename__] = model.query.filter_by(patient_id=patient_id).delete(synchronize_session=False)
+    counts['family_alerts'] = integrations.delete_alerts(patient_id)
+    counts['provider_reports'] = integrations.delete_reports(patient_id)
     if not keep_profile:
         counts['wearable_profile'] = WearableProfile.query.filter_by(patient_id=patient_id).delete(synchronize_session=False)
     db.session.commit()

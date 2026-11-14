@@ -37,7 +37,7 @@ Roberto's own watch data with his consent.
 
 ## BAAs needed for production
 
-- **AI vendor:** Google Cloud **Vertex AI** (Gemini) under Google's BAA. The AI Studio API key is *not* covered.
+- **AI vendor:** the app now uses Anthropic Claude (main's `claude_client.py`). Before sending wearable-derived data, get Anthropic's BAA / zero-data-retention terms in place; until then keep `AI_DATA_TIER=free`.
 - **Hosting:** a HIPAA-eligible cloud (e.g. Google Cloud, AWS, Azure) with a signed BAA.
 - **Push / SMS provider:** e.g. Twilio (BAA available). ntfy.sh is for the demo only and receives only generic text.
 - **Tunnel/CDN:** Cloudflare (enterprise BAA) or replace the tunnel with hosting behind a managed load balancer.
