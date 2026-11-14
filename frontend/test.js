@@ -196,6 +196,7 @@
           bubble("model", data.reply);
           if ($("chatSpeak").checked) speak(data.reply);
           if (data.crisis) $("crisisPanel").hidden = false;
+          if (data.mood && window.Aura) Aura.setMood(data.mood, "chat");
           if (data.alert_sent) bubble("system", "The family members on your care team were sent an alert so they can check in with you. They can't see what you wrote.");
         }).catch(function (err) {
           history.pop();
@@ -222,6 +223,7 @@
     }
     var status = el("p", { class: "status", role: "status" });
     var save = el("button", { type: "button", class: "btn", onclick: function () {
+      if (window.Aura) Aura.fromStress(+$(activity + "-after").value);
       api("POST", "/api/checkins", { activity: activity, stress_before: +$(activity + "-before").value, stress_after: +$(activity + "-after").value })
         .then(function () { status.textContent = "Saved. See it in Mood history."; })
         .catch(function (e) { status.textContent = e.message; });

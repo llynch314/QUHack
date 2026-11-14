@@ -22,6 +22,7 @@
             const activity = section.dataset.activity;
             const before = +document.getElementById(activity + '-before').value;
             const after = +document.getElementById(activity + '-after').value;
+            if (window.Aura) Aura.fromStress(after);
             const result = section.querySelector('.result');
             const diff = after - before;
             let msg = diff < 0 ? `Your stress went down by ${-diff}. Nice work.`

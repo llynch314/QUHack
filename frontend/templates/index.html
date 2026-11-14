@@ -13,7 +13,8 @@
             <a class="btn" href="{{ url_for('toolkit') }}">I need to calm down now</a>
         </div>
     </div>
-    <div class="capsule">
+    {# Shows your main mood from the aura (static/js/aura.js); the logo is the fallback. #}
+    <div class="capsule" data-aura-oval>
         <img src="{{ url_for('static', filename='img/logo.png') }}" alt="AttuneMIND: space to slow down" width="800" height="579">
     </div>
 </section>
