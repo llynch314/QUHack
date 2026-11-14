@@ -14,9 +14,9 @@ bp = Blueprint("chat", __name__, url_prefix="/api")
 HISTORY_LIMIT = 20  # messages of context sent to the model
 
 ALERT_NOTES = {
-    "crisis": "Mind Connect detected signs of a crisis. Please check in with them now.",
-    "panic_attack": "Mind Connect detected signs of a panic attack. Please check in with them.",
-    "meltdown": "Mind Connect detected signs of a meltdown. Please check in with them.",
+    "crisis": "AttuneMind detected signs of a crisis. Please check in with them now.",
+    "panic_attack": "AttuneMind detected signs of a panic attack. Please check in with them.",
+    "meltdown": "AttuneMind detected signs of a meltdown. Please check in with them.",
 }
 
 

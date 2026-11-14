@@ -1,4 +1,4 @@
-"""Database models for Mind Connect.
+"""Database models for AttuneMind.
 
 Three kinds of account share one `User` table, told apart by `role`:
   - patient  : the person using the app; owns all of their own data

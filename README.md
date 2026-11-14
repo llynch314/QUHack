@@ -1,4 +1,4 @@
-# mind-connect2.0
+# AttuneMind
 Ai powered mental health assistant app
 
 ## Setup

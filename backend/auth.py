@@ -22,7 +22,7 @@ ACCESS = {
 # ---------- tokens ----------
 
 def _serializer():
-    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt="mind-connect-auth")
+    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt="attunemind-auth")
 
 
 def issue_token(user):

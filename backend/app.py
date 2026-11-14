@@ -1,4 +1,4 @@
-"""Mind Connect backend: a JSON API with three kinds of login (patient, provider, family).
+"""AttuneMind backend: a JSON API with three kinds of login (patient, provider, family).
 
 Run:  python app.py   ->  http://127.0.0.1:5000
 API docs are in the README.
@@ -34,7 +34,7 @@ def create_app(config=None):
     app.config.update(
         SECRET_KEY=secret,
         SQLALCHEMY_DATABASE_URI=os.getenv(
-            "DATABASE_URL", f"sqlite:///{Path(app.instance_path) / 'mindconnect.db'}"),
+            "DATABASE_URL", f"sqlite:///{Path(app.instance_path) / 'attunemind.db'}"),
         TOKEN_MAX_AGE=60 * 60 * 24 * 7,  # logins last 7 days
         MAX_CONTENT_LENGTH=10 * 1024 * 1024,  # 10 MB (webcam frames)
     )
