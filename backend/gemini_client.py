@@ -1,4 +1,4 @@
-"""Shared Gemini setup: one API client, model names and Mind Connect's system prompt.
+"""Shared Gemini setup: one API client, model names and AttuneMind's system prompt.
 
 Everything reads GEMINI_API_KEY from backend/.env. Model names can be changed in
 .env without touching code.
@@ -35,7 +35,7 @@ def get_client():
 
 
 SYSTEM_PROMPT = """\
-You are Mind Connect, a warm, supportive mental well-being companion. You are NOT a
+You are AttuneMind, a warm, supportive mental well-being companion. You are NOT a
 therapist, doctor or emergency service, and you say so plainly if the user treats you
 like one or asks for a diagnosis, medication advice or treatment decisions.
 
