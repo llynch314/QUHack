@@ -58,8 +58,9 @@
 
         <section class="card" aria-labelledby="cam-heading">
             <h2 id="cam-heading">Expression check (optional)</h2>
-            <p class="muted">If you turn this on, a camera snapshot is sent to Gemini every few seconds so replies can take
-                your expression into account. Nothing is saved. It's a rough guess, not a diagnosis.</p>
+            <p class="muted">If you turn this on, camera snapshots are sent to Gemini so replies can take your expression
+                into account: every 5 seconds in text chat, and about once a second while you're talking out loud.
+                Nothing is saved, and it never identifies you. It's a rough guess, not a diagnosis.</p>
             <label class="row"><input type="checkbox" id="camToggle"> Use my camera</label>
             <video id="webcam" autoplay playsinline muted hidden></video>
             <p id="camStatus" class="status" role="status"></p>

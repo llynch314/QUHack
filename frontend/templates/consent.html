@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Welcome - Mind Connect{% endblock %}
+{% block content %}
+<h1>Welcome{% if current_user.name %}, {{ current_user.name.split(' ')[0] }}{% endif %}</h1>
+<p>Before you start, here's what Mind Connect is and what it keeps. Please read and choose.</p>
+
+<form method="post" class="stack" style="max-width:720px">
+    {% if error %}<p class="crisis-panel" role="alert">{{ error }}</p>{% endif %}
+
+    <section class="card stack" aria-labelledby="terms-h">
+        <h2 id="terms-h">1. What Mind Connect is (required)</h2>
+        <ul>
+            <li>Mind Connect is a support tool. It is <strong>not</strong> a therapist, doctor or emergency service, and AI replies can be wrong.</li>
+            <li>If you're in danger, call or text <strong>988</strong> (US) or call <strong>911</strong>.</li>
+            <li>Your chats are sent to Google's Gemini AI to create replies. Mind Connect doesn't save them.</li>
+            <li>We save your Google name and email, and the check-in ratings you choose to save. You can delete everything at any time.</li>
+        </ul>
+        <label class="row"><input type="checkbox" name="agree" value="yes" required>
+            I understand and agree. (<a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">Full privacy &amp; disclosures</a>)</label>
+    </section>
+
+    <section class="card stack" aria-labelledby="expr-h">
+        <h2 id="expr-h">2. Save my expression readings (optional)</h2>
+        <p>If you turn on your camera in Chat, Gemini reads your facial expression (for example happy, sad or neutral).
+            If you tick this box, each reading is saved to your account with the time, so you can see how your mood
+            changes in My Progress.</p>
+        <ul>
+            <li>Only the expression word is saved, never the camera image. It never identifies you.</li>
+            <li>It's a rough guess, not a diagnosis.</li>
+            <li>You can turn this off or delete all readings in My Progress at any time.</li>
+        </ul>
+        <label class="row"><input type="checkbox" name="save_expressions" value="yes">
+            Yes, save my expression readings to my account.</label>
+    </section>
+
+    <div class="row">
+        <button type="submit" class="btn btn-primary">Continue</button>
+    </div>
+</form>
+<form method="post" action="{{ url_for('auth.logout') }}" style="margin-top:12px">
+    <button type="submit" class="btn btn-ghost">Cancel and sign out</button>
+</form>
+{% endblock %}

@@ -1,5 +1,6 @@
 """Mind Connect web app. Run with `make run` (or `python app.py` from backend/)."""
 import base64
+import csv
 import logging
 import os
 import secrets
@@ -13,7 +14,7 @@ load_dotenv()
 from auth import bp as auth_bp, init_auth, login_required  # noqa: E402
 from gemini_backend import chat_reply  # noqa: E402
 from gemini_emotion import NoFaceDetected, detect_emotion  # noqa: E402
-from models import CheckIn, db  # noqa: E402
+from models import CheckIn, ExpressionReading, add_missing_columns, as_utc, db  # noqa: E402
 from voice import sock  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -46,9 +47,15 @@ db.init_app(app)
 init_auth(app)
 sock.init_app(app)
 app.register_blueprint(auth_bp)
+app.add_template_filter(lambda dt: as_utc(dt).isoformat(), 'iso')   # for <time datetime=...>
 
 with app.app_context():
     db.create_all()
+    add_missing_columns()
+
+# Expression readings are also appended here (and printed in the terminal) for demos.
+os.makedirs(app.instance_path, exist_ok=True)
+EXPRESSION_LOG = os.path.join(app.instance_path, 'expression_log.csv')
 
 
 # ---------- Pages ----------
@@ -79,7 +86,13 @@ def report():
         diffs.setdefault(c.activity, []).append(c.stress_after - c.stress_before)
     # [(activity, average change, count)], biggest drop in stress first
     by_activity = sorted(((a, sum(d) / len(d), len(d)) for a, d in diffs.items()), key=lambda t: t[1])
-    return render_template('report.html', checkins=checkins, avg_change=avg_change, by_activity=by_activity)
+    readings = g.user.expressions
+    expression_counts = {}
+    for r in readings:
+        expression_counts[r.emotion] = expression_counts.get(r.emotion, 0) + 1
+    return render_template('report.html', checkins=checkins, avg_change=avg_change, by_activity=by_activity,
+                           readings=readings[-50:], expression_counts=sorted(expression_counts.items(), key=lambda t: -t[1]),
+                           total_readings=len(readings))
 
 
 @app.route('/privacy')
@@ -119,15 +132,60 @@ def api_emotion():
     mime_type = header[5:].split(';')[0] if header.startswith('data:') else 'image/jpeg'
     if mime_type not in ('image/jpeg', 'image/png', 'image/webp'):
         return _error('Unsupported image type.', 400)
+    source = 'voice' if data.get('source') == 'voice' else 'chat'
     try:
-        return jsonify(emotion=detect_emotion(base64.b64decode(b64), mime_type))
+        emotion = detect_emotion(base64.b64decode(b64), mime_type)
     except NoFaceDetected:
-        return jsonify(emotion=None)
+        return jsonify(emotion=None, saved=False)
     except RuntimeError as e:
         return _error(str(e), 503)
     except Exception:
         log.exception('Gemini emotion detection failed')
         return _error('Emotion detection failed.', 502)
+    return jsonify(emotion=emotion, saved=_record_expression(emotion, source))
+
+
+def _record_expression(emotion, source):
+    """Save a reading if the signed-in user opted in. Always prints it in the terminal for the demo."""
+    user = g.get('user')
+    if not (user and user.save_expressions):
+        log.info('EXPRESSION  %-8s via %-5s  (guest or not opted in - not saved)', emotion, source)
+        return False
+    reading = ExpressionReading(user_id=user.id, emotion=emotion, source=source)
+    db.session.add(reading)
+    db.session.commit()
+    log.info('EXPRESSION  %-8s via %-5s  saved for user %s (%s)', emotion, source, user.id, user.name)
+    try:
+        new_file = not os.path.exists(EXPRESSION_LOG)
+        with open(EXPRESSION_LOG, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if new_file:
+                writer.writerow(['time_utc', 'user_id', 'user_name', 'emotion', 'source'])
+            writer.writerow([as_utc(reading.created_at).isoformat(timespec='seconds'), user.id, user.name, emotion, source])
+    except OSError:
+        log.exception('Could not write %s', EXPRESSION_LOG)
+    return True
+
+
+def _purge_expression_log(user_id):
+    """Remove a user's rows from the CSV log, so deleting data really deletes it."""
+    if not os.path.exists(EXPRESSION_LOG):
+        return
+    with open(EXPRESSION_LOG, newline='', encoding='utf-8') as f:
+        rows = list(csv.reader(f))
+    keep = [r for r in rows if not (len(r) > 1 and r[1] == str(user_id))]
+    with open(EXPRESSION_LOG, 'w', newline='', encoding='utf-8') as f:
+        csv.writer(f).writerows(keep)
+
+
+@app.post('/api/expressions/delete')
+@login_required
+def api_delete_expressions():
+    """Delete all of the user's saved expression readings (keeps the account)."""
+    ExpressionReading.query.filter_by(user_id=g.user.id).delete()
+    db.session.commit()
+    _purge_expression_log(g.user.id)
+    return jsonify(deleted=True)
 
 
 def _rating(value):
@@ -166,8 +224,10 @@ def api_checkins():
 @login_required
 def api_delete_me():
     """Delete the account and every check-in. Required for user control over their data."""
+    user_id = g.user.id
     db.session.delete(g.user)
     db.session.commit()
+    _purge_expression_log(user_id)
     session.clear()
     return jsonify(deleted=True)
 

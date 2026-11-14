@@ -3,6 +3,7 @@
 The API key stays on the server. Browser <-> /ws/voice protocol:
   browser -> server  binary: 16 kHz mono 16-bit PCM microphone audio
                      text:   {"type": "text", "text": "..."}  (typed message)
+                             {"type": "frame", "data": "<base64 JPEG>"}  (camera, ~1 per second)
                              {"type": "stop"}
   server -> browser  binary: 24 kHz mono 16-bit PCM audio from Gemini
                      text:   {"type": "ready" | "turn_complete" | "interrupted" | "crisis"}
@@ -10,6 +11,7 @@ The API key stays on the server. Browser <-> /ws/voice protocol:
                              {"type": "error", "message": "..."}
 """
 import asyncio
+import base64
 import json
 import logging
 
@@ -26,6 +28,7 @@ log = logging.getLogger(__name__)
 sock = Sock()
 
 THINKING_LEVELS = {'low', 'medium', 'high'}  # MINIMAL is not supported on extended thinking
+MAX_FRAME_BYTES = 1_000_000   # camera frames are ~20-40 KB; Live rejects frames over 2 MB
 
 
 def live_config(extended, level):
@@ -81,6 +84,15 @@ async def _relay(ws, model, config):
                 data = json.loads(msg)
                 if data.get('type') == 'stop':
                     return
+                if data.get('type') == 'frame' and data.get('data'):
+                    # Camera snapshot (JPEG, base64) so the Live model can see the user's expression.
+                    try:
+                        jpeg = base64.b64decode(data['data'], validate=True)
+                    except ValueError:
+                        continue
+                    if jpeg[:3] == b'\xff\xd8\xff' and len(jpeg) <= MAX_FRAME_BYTES:
+                        await session.send_realtime_input(video=types.Blob(data=jpeg, mime_type='image/jpeg'))
+                    continue
                 if data.get('type') == 'text' and data.get('text'):
                     text = str(data['text'])[:2000]
                     if mentions_crisis(text):

@@ -102,22 +102,33 @@
     const camStatus = document.getElementById('camStatus');
     let stream = null, timer = null;
 
-    async function snapshot() {
-        if (!video.videoWidth) return;
+    // Returns a JPEG data URL of the current camera frame, or null if the camera is off.
+    function grabFrame(width = 480, quality = 0.8) {
+        if (!stream || !video.videoWidth) return null;
         const canvas = document.createElement('canvas');
-        canvas.width = 480;
-        canvas.height = Math.round(480 * video.videoHeight / video.videoWidth);
+        canvas.width = width;
+        canvas.height = Math.round(width * video.videoHeight / video.videoWidth);
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', quality);
+    }
+    // voice.js uses this to stream frames to Gemini Live.
+    window.MC.camera = { grabFrame };
+
+    async function snapshot() {
+        const frame = grabFrame();
+        if (!frame) return;
         try {
             const res = await fetch('/api/emotion', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image_data: canvas.toDataURL('image/jpeg', 0.8) }),
+                body: JSON.stringify({ image_data: frame, source: window.MC.voiceActive ? 'voice' : 'chat' }),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             emotion = data.emotion;
-            camStatus.textContent = emotion ? 'Your expression looks: ' + emotion : 'No face found.';
+            camStatus.textContent = emotion
+                ? 'Your expression looks: ' + emotion + (data.saved ? ' (saved to My Progress)' : '')
+                : 'No face found.';
         } catch (err) {
             camStatus.textContent = err.message || 'Expression check failed.';
         }
@@ -138,6 +149,7 @@
         } else {
             clearInterval(timer);
             if (stream) stream.getTracks().forEach(t => t.stop());
+            stream = null;
             video.hidden = true;
             emotion = null;
             camStatus.textContent = 'Camera off.';
