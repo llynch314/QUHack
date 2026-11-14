@@ -1,54 +1,69 @@
-import base64
-import cv2
-import numpy as np
-from deepface import DeepFace
-from flask import Flask, render_template, request, jsonify
-from gemini_backend import generate_response
-from dotenv import load_dotenv
-import os
+"""Mind Connect backend: a JSON API with three kinds of login (patient, provider, family).
 
-# Load environment variables
+Run:  python app.py   ->  http://127.0.0.1:5000
+API docs are in the README.
+"""
+import os
+import secrets
+from pathlib import Path
+
+from dotenv import load_dotenv
+from flask import Flask, jsonify, send_from_directory
+from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
+
+from models import db
+from routes import alerts, auth_routes, care_team, chat, documents
+
 load_dotenv()
 
-app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
 
-@app.route('/')
-def index():
-    return render_template('index.html')
 
-@app.route('/chat', methods=['GET', 'POST'])
-def chat():
+def create_app(config=None):
+    app = Flask(__name__, instance_path=str(BASE_DIR / "instance"))
+    os.makedirs(app.instance_path, exist_ok=True)
 
-    if request.method == 'POST':
-        user_input = request.form.get('user_input')
-        if not user_input:
-            return render_template('chat.html', error="No input provided")
+    secret = (config or {}).get("SECRET_KEY") or os.getenv("SECRET_KEY")
+    if not secret:
+        print("WARNING: SECRET_KEY not set in .env; using a random one (everyone is "
+              "logged out when the server restarts).")
+        secret = secrets.token_hex(32)
 
-        # Assuming generate_response is a function that generates a response based on user input
-        my_variable = generate_response(user_input)
-        return render_template('chat.html', variable=my_variable)
+    app.config.update(
+        SECRET_KEY=secret,
+        SQLALCHEMY_DATABASE_URI=os.getenv(
+            "DATABASE_URL", f"sqlite:///{Path(app.instance_path) / 'mindconnect.db'}"),
+        TOKEN_MAX_AGE=60 * 60 * 24 * 7,  # logins last 7 days
+        MAX_CONTENT_LENGTH=10 * 1024 * 1024,  # 10 MB (webcam frames)
+    )
+    if config:
+        app.config.update(config)
 
-    return render_template('chat.html')  # Handles GET requests and initial page load
+    db.init_app(app)
+    # Lets the frontend call the API from another port (e.g. VS Code Live Server).
+    CORS(app, resources={r"/api/*": {"origins": os.getenv("CORS_ORIGINS", "*")}})
 
-# Route to handle emotion detection from the frontend
-@app.route('/detect_emotion', methods=['POST'])
-def detect_emotion():
-    data = request.get_json()
-    image_data = data['image_data'].split(',')[1]  # Remove the 'data:image/png;base64,' part
-    
-    # Decode the base64 image data
-    img_data = base64.b64decode(image_data)
-    np_arr = np.frombuffer(img_data, np.uint8)
-    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-    
-    # Analyze the emotion using DeepFace
-    try:
-        analyze = DeepFace.analyze(frame, actions=['emotion'], silent=True)
-        dominant_emotion = analyze[0]['dominant_emotion']
-        print(dominant_emotion)
-        return render_template('chat.html', emotion=dominant_emotion)  # Handles GET requests and initial page load
-    except Exception as e:
-        return jsonify({'error': str(e)})
+    for module in (auth_routes, care_team, documents, alerts, chat):
+        app.register_blueprint(module.bp)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    @app.errorhandler(HTTPException)
+    def json_errors(e):
+        return jsonify(error=e.description), e.code
+
+    # Serve the frontend folder so the site and API share one address.
+    @app.get("/")
+    @app.get("/<path:filename>")
+    def frontend(filename="index.html"):
+        if not (FRONTEND_DIR / filename).is_file() and filename == "index.html":
+            filename = "test.html"
+        return send_from_directory(FRONTEND_DIR, filename)
+
+    with app.app_context():
+        db.create_all()
+    return app
+
+
+if __name__ == "__main__":
+    create_app().run(debug=os.getenv("FLASK_DEBUG") == "1")
