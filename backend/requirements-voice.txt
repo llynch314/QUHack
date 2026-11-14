@@ -1,0 +1,8 @@
+# Optional: only needed for the standalone voice scripts (speechtotext.py, tts.py).
+# Install with:  pip install -r requirements-voice.txt
+# Note: pyaudio needs PortAudio. On macOS run `brew install portaudio` first;
+# on Linux run `sudo apt install portaudio19-dev` first.
+
+SpeechRecognition~=3.10
+pyaudio~=0.2.14
+pyttsx3~=2.90
