@@ -13,6 +13,9 @@
 // every mood felt, running clockwise from the top-left corner, with a short summary.
 // The session is kept in this browser tab only (sessionStorage), never sent anywhere.
 //
+// Any element with data-aura-oval (the big oval on the home page and the dashboard) shows the
+// main mood: the current one, or the most-felt one once a session has ended.
+//
 // Other scripts can call:  Aura.setMood('calm', 'chat'),  Aura.fromStress(7),
 //                          Aura.fromCamera('happy'),  Aura.endSession()
 (function () {
@@ -209,6 +212,48 @@
     return 'conic-gradient(from ' + from.toFixed(1) + 'deg, ' + stops.join(', ') + ')';
   }
 
+  // ---------- The mood oval(s) ----------
+  function readableText(hex) {
+    // Dark text on light colors, white on dark ones (simple luminance check).
+    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#22301E' : '#FFFFFF';
+  }
+  function mainMood() {
+    // The current mood, or the one felt longest once the session has ended.
+    if (!session.ended) return current();
+    var totals = {};
+    timeline().forEach(function (x) { totals[x.m] = (totals[x.m] || 0) + x.ms; });
+    var top = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; })[0];
+    return { m: top, s: 'session' };
+  }
+  function renderOvals() {
+    var mm = mainMood(), m = BY_ID[mm.m], fresh = mm.s === 'start';
+    document.querySelectorAll('[data-aura-oval]').forEach(function (oval) {
+      var fill = oval.querySelector('.fill, .aura-oval-fill'), note = oval.querySelector('.meaning, .aura-oval-note');
+      if (!fill || !note) {
+        // Replace the placeholder (logo) with the mood oval.
+        fill = el('div', { class: 'aura-oval-fill' });
+        note = el('p', { class: 'aura-oval-note', 'aria-live': 'polite' });
+        oval.replaceChildren(fill, el('div', { class: 'aura-oval-bottom' }, [
+          note, el('button', { type: 'button', class: 'btn aura-oval-btn',
+                               onclick: function (e) { e.stopPropagation(); openPanel(); } }, [document.createTextNode('Change mood')])
+        ]));
+        oval.classList.add('aura-oval');
+      }
+      fill.style.background = 'linear-gradient(160deg, ' + m.colors[0] + ', ' + m.colors[2] + ' 55%, ' + m.colors[1] + ')';
+      fill.style.color = readableText(m.colors[0]);
+      fill.textContent = fresh ? 'How are you?' : (session.ended ? 'Mostly ' + m.label.toLowerCase() : m.label);
+      note.textContent = fresh
+        ? 'Pick a mood, chat, or do a check-in, and this will match how you feel.'
+        : (session.ended ? 'Your main mood this session. Your session aura is around the screen.' : m.note);
+    });
+    // Dashboard color dots: highlight the color family of the current mood.
+    var dots = document.querySelectorAll('.dot[data-name]');
+    if (dots.length && !fresh && m.family) {
+      dots.forEach(function (d) { d.setAttribute('aria-pressed', String(d.dataset.name === m.family)); });
+    }
+  }
+
   function render() {
     var c = current(), m = BY_ID[c.m];
     var hidden = hiddenPref();
@@ -241,6 +286,7 @@
     if (!session.ended && c.m === 'hurting') {
       panelNote.textContent = m.note + ' If you are in danger, call or text 988, or call 911.';
     }
+    renderOvals();
   }
 
   // ---------- Changing the mood ----------
@@ -390,6 +436,8 @@
       var dot = e.target.closest && e.target.closest('.dot[data-name]');
       if (dot && !clickingDot && FAMILY_DEFAULT[dot.dataset.name]) setMood(FAMILY_DEFAULT[dot.dataset.name], 'picked');
     });
+    // The dashboard redraws its oval with its 5 basic colors: put the main mood back.
+    window.addEventListener('attune:mood', function () { setTimeout(renderOvals, 0); });
     // Signing out ends the session: show the session aura first.
     document.addEventListener('submit', function (e) {
       var form = e.target;
