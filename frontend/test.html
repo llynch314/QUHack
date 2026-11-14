@@ -168,10 +168,10 @@ blockquote{
     <!-- Voice, camera and read-aloud on top of the chat (same markup as templates/_chat_toolbar.html) -->
     <div class="chat-toolbar" role="group" aria-label="Chat options">
       <button type="button" class="btn" id="voiceToggle" aria-pressed="false" aria-label="Start voice chat"
-              title="Talk out loud and hear replies. Headphones work best."><span class="live-dot" aria-hidden="true"></span>🎙️ Voice chat</button>
+              title="Talk out loud and hear replies. Headphones work best."><span class="live-dot" aria-hidden="true"></span><svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/></svg>Voice chat</button>
       <button type="button" class="btn" id="camToggle" aria-pressed="false"
-              title="Let the AI notice your facial expression. Nothing is saved unless you turn that on."><span class="live-dot" aria-hidden="true"></span>📹 Camera</button>
-      <button type="button" class="btn" id="speakToggle" aria-pressed="false">🔊 Read replies aloud</button>
+              title="Let the AI notice your facial expression. Nothing is saved unless you turn that on."><span class="live-dot" aria-hidden="true"></span><svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5 21 7.5v9l-5-3z"/></svg>Camera</button>
+      <button type="button" class="btn" id="speakToggle" aria-pressed="false"><svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9.5v5h3.5L12 18V6L7.5 9.5z"/><path d="M15.5 9a4.5 4.5 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>Read replies aloud</button>
     </div>
     <div class="chat-live card" id="chatLive" hidden>
       <div class="stack">
@@ -189,7 +189,7 @@ blockquote{
     <form class="chat-form" id="chatForm">
       <label for="chatInput" class="sr-only">Your message</label>
       <textarea id="chatInput" rows="2" placeholder="Type how you're feeling... (Enter to send)" maxlength="4000" required></textarea>
-      <button type="button" id="dictateBtn" class="btn btn-ghost" title="Type with your voice" aria-label="Type with your voice">🎤</button>
+      <button type="button" id="dictateBtn" class="btn btn-ghost" title="Type with your voice" aria-label="Type with your voice"><svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/></svg></button>
       <button type="submit" class="btn btn-primary" id="sendBtn">Send</button>
     </form>
     <p id="chatStatus" class="status" role="status"></p>

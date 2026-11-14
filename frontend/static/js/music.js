@@ -32,7 +32,7 @@
   function PlaylistTile(props) {
     var p = props.playlist;
     return h("li", { className: "music-tile" },
-      p.image ? h("img", { src: p.image, alt: "", loading: "lazy", width: 64, height: 64 }) : h("span", { className: "music-art", "aria-hidden": "true" }, "♪"),
+      p.image ? h("img", { src: p.image, alt: "", loading: "lazy", width: 64, height: 64 }) : h("span", { className: "music-art", "aria-hidden": "true" }),
       h("div", { className: "grow" },
         h("strong", null, p.name),
         p.owner ? h("div", { className: "muted" }, "by " + p.owner) : null),

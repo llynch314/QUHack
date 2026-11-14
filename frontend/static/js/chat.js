@@ -28,7 +28,7 @@
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'btn speak-btn';
-            btn.textContent = '🔊 Read aloud';
+            btn.textContent = 'Read aloud';
             btn.addEventListener('click', () => speakNow(text));
             div.appendChild(document.createElement('br'));
             div.appendChild(btn);

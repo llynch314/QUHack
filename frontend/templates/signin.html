@@ -9,19 +9,16 @@
 
 <div class="grid">
     <article class="card feature stack">
-        <div class="icon" aria-hidden="true">🌱</div>
         <h2>I'm using attuneMIND</h2>
         <p>Chat, use the Calm Toolkit, track your progress, and choose who on your care team can see what.</p>
         <div><a class="btn btn-primary" href="{{ url_for('auth.login', role='patient', next=next) }}">Sign in</a></div>
     </article>
     <article class="card feature stack">
-        <div class="icon" aria-hidden="true">🩺</div>
         <h2>I'm a health provider</h2>
         <p>See the health documents your patients choose to share with you, and add your own notes.</p>
         <div><a class="btn btn-primary" href="{{ url_for('auth.login', role='provider') }}">Provider sign-in</a></div>
     </article>
     <article class="card feature stack">
-        <div class="icon" aria-hidden="true">🏠</div>
         <h2>I'm a family member</h2>
         <p>Get alerted if someone who added you has a panic attack, meltdown or crisis, so you can check in.</p>
         <div><a class="btn btn-primary" href="{{ url_for('auth.login', role='family') }}">Family sign-in</a></div>

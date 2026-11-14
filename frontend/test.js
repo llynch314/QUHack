@@ -248,7 +248,7 @@
           return el("li", {}, [
             el("div", { class: "grow" }, [
               el("strong", {}, [m.name]), " ",
-              el("span", { class: "pill" + (m.verified ? " ok" : "") }, [isProvider ? (m.verified ? "✓ Verified provider" : "Provider (unverified)") : "Family"]),
+              el("span", { class: "pill" + (m.verified ? " ok" : "") }, [isProvider ? (m.verified ? "Verified provider" : "Provider (unverified)") : "Family"]),
               el("div", { class: "muted" }, [m.email + (details ? " · " + details : "")]),
               el("div", { class: "muted" }, ["Can see: " + (isProvider ? "health documents" : "urgent alerts")])
             ]),

@@ -299,9 +299,9 @@
     const missing = !d.family.members.length || !d.doctor.members.length;
     $('teamRow').hidden = !missing;
     $('whoStatus').innerHTML = !d.patient.consent
-      ? '⚠️ They haven\'t accepted the My Watch consent yet: open the patient app signed in as them and click <strong>I understand and agree</strong>.'
-      : missing ? '⚠️ Their care team is missing a family member or doctor, so alerts or reports have nobody to go to.'
-      : `✅ Ready. Family: ${esc(d.family.members.join(', '))} · Doctor: ${esc(d.doctor.members.join(', '))}`;
+      ? 'Not ready: they haven\'t accepted the My Watch consent yet: open the patient app signed in as them and click <strong>I understand and agree</strong>.'
+      : missing ? 'Not ready: their care team is missing a family member or doctor, so alerts or reports have nobody to go to.'
+      : `Ready. Family: ${esc(d.family.members.join(', '))} · Doctor: ${esc(d.doctor.members.join(', '))}`;
     ['emergency_alerts', 'family_tier2_alerts'].forEach(k => { $(k).checked = !!d.settings[k]; });
 
     // patient
@@ -310,7 +310,7 @@
     $('pTier').innerHTML = st ? `<span class="lvl lvl${st.tier}">Tier ${st.tier}: ${LVL[st.tier]}</span>` : '';
     const L = d.latest || {};
     $('pVitals').textContent = L.heart_rate ? `Heart rate ${Math.round(L.heart_rate.value)} bpm · HRV ${L.hrv_sdnn ? Math.round(L.hrv_sdnn.value) : '-'} ms (only the patient sees these)` : '';
-    $('pNudge').innerHTML = d.nudge && d.nudge.tier < 3 ? `<div class="phone">🔔 ${esc(d.nudge.message)}</div>` : '';
+    $('pNudge').innerHTML = d.nudge && d.nudge.tier < 3 ? `<div class="phone">${esc(d.nudge.message)}</div>` : '';
     if (st && st.state === 'emergency') {
       let line = '';
       if (d.pending_alert) {

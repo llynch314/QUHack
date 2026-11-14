@@ -5,7 +5,7 @@
 <h1>My patients</h1>
 <p class="muted">Patients appear here after they add you ({{ current_user.email }}) to their care team. You can see and add their health documents only.</p>
 <p class="muted">Patients see you as: <strong>{{ current_user.display_name }}, {{ current_user.provider_summary }}</strong>
-    ({{ '✓ Verified' if current_user.is_verified_provider else 'unverified' }}). <a href="{{ url_for('auth.account') }}">Edit profile</a></p>
+    ({{ 'Verified' if current_user.is_verified_provider else 'unverified' }}). <a href="{{ url_for('auth.account') }}">Edit profile</a></p>
 
 {% if links %}
     <div class="grid">

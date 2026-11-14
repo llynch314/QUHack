@@ -227,7 +227,7 @@
         const active = devices.filter(d => !d.revoked);
         $('deviceList').innerHTML = devices.length ? devices.map(d => `<li class="card small">
             <strong>${esc(d.label)}</strong> ${d.revoked ? '<span class="tag denied">revoked</span>' : '<span class="tag">active</span>'}<br>
-            🔒 Encrypted connection (TLS) · last sync ${esc(ago(d.last_seen_at))}
+            Encrypted connection (TLS) · last sync ${esc(ago(d.last_seen_at))}
             ${d.revoked ? '' : `<button type="button" class="btn btn-ghost" data-revoke="${d.id}" style="min-height:32px;padding:2px 10px;margin-left:6px">Revoke</button>`}</li>`).join('')
             : '<li class="muted small">No devices yet.</li>';
         $('deviceList').querySelectorAll('[data-revoke]').forEach(b => b.onclick = async () => {
@@ -236,7 +236,7 @@
             loadDevices();
         });
         const seen = active.map(d => d.last_seen_at).filter(Boolean).sort().pop();
-        $('syncChip').textContent = active.length ? `⌚ ${active.length} device(s) · last sync ${ago(seen)}` : 'No device yet';
+        $('syncChip').textContent = active.length ? `${active.length} device(s) · last sync ${ago(seen)}` : 'No device yet';
     }
     $('devCreate').onclick = async () => {
         try {
@@ -273,11 +273,11 @@
         TOGGLES.forEach(k => { $(k).checked = !!p.profile[k]; });
         const e = p.encryption;
         $('privEnc').innerHTML = [
-            `🔒 In transit: ${esc(e.in_transit)}${location.protocol === 'https:' ? ' (this page is on HTTPS now)' : ' (you are on local http; the phone must use the tunnel URL)'}`,
-            `🗄️ At rest: ${esc(e.at_rest)}${e.key_source === 'dev-generated' ? ' <span class="tag denied">dev key: demo only</span>' : ''}`,
-            '🔑 Device tokens: stored only as a SHA-256 hash, write-only, revocable',
-            '🕑 Auto sign-out after inactivity on this page',
-            '📜 Every view of your data is in the audit log below',
+            `In transit: ${esc(e.in_transit)}${location.protocol === 'https:' ? ' (this page is on HTTPS now)' : ' (you are on local http; the phone must use the tunnel URL)'}`,
+            `At rest: ${esc(e.at_rest)}${e.key_source === 'dev-generated' ? ' <span class="tag denied">dev key: demo only</span>' : ''}`,
+            'Device tokens: stored only as a SHA-256 hash, write-only, revocable',
+            'Auto sign-out after inactivity on this page',
+            'Every view of your data is in the audit log below',
         ].map(x => `<li>${x}</li>`).join('');
         const a = p.ai;
         const trained = a.tier === 'free' ? 'AI features off to protect your data (free tier)' : 'Used to train AI: <strong>No</strong>';
@@ -293,7 +293,7 @@
         $('auditRows').innerHTML = p.audit.map(r => `<tr><td>${esc(new Date(r.ts).toLocaleString())}</td>
             <td>${esc(r.actor_role)}${r.actor_id ? ' #' + r.actor_id : ''}</td><td>${esc(r.action)}</td>
             <td><span class="tag ${r.outcome === 'denied' ? 'denied' : ''}">${esc(r.outcome)}</span></td></tr>`).join('');
-        $('connChip').textContent = location.protocol === 'https:' ? '🔒 Encrypted connection (TLS)' : '⚠️ Local http (dev only)';
+        $('connChip').textContent = location.protocol === 'https:' ? 'Encrypted connection (TLS)' : 'Local http (dev only)';
         $('connChip').className = 'chip ' + (location.protocol === 'https:' ? 'ok' : 'warn');
     }
     $('deleteBtn').onclick = async () => {

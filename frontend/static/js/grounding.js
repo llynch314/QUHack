@@ -4,11 +4,11 @@
 // how they feel afterwards).
 (function () {
     const SENSES = [
-        { n: 5, icon: '👀', title: 'things I can see', hint: 'e.g. a blue mug' },
-        { n: 4, icon: '✋', title: 'things I can feel or touch', hint: 'e.g. my feet on the floor' },
-        { n: 3, icon: '👂', title: 'things I can hear', hint: 'e.g. a fan humming' },
-        { n: 2, icon: '👃', title: 'things I can smell', hint: 'e.g. coffee' },
-        { n: 1, icon: '👅', title: 'thing I can taste (or one kind thing about myself)', hint: 'e.g. mint, or "I\'m trying"' },
+        { n: 5, title: 'things I can see', hint: 'e.g. a blue mug' },
+        { n: 4, title: 'things I can feel or touch', hint: 'e.g. my soft socks' },
+        { n: 3, title: 'things I can hear', hint: 'e.g. a fan humming' },
+        { n: 2, title: 'things I can smell', hint: 'e.g. coffee' },
+        { n: 1, title: 'thing I can taste (or one kind thing about myself)', hint: 'e.g. mint, or "I\'m trying"' },
     ];
     const TOTAL = SENSES.reduce((sum, s) => sum + s.n, 0);
     let counter = 0;
@@ -31,7 +31,7 @@
             const fs = document.createElement('fieldset');
             fs.className = 'ground-sense';
             const legend = document.createElement('legend');
-            legend.innerHTML = `<span aria-hidden="true">${sense.icon}</span> ${sense.n} ${sense.title}<span class="ground-count"></span>`;
+            legend.innerHTML = `<span class="ground-num" aria-hidden="true">${sense.n}</span><span class="sr-only">${sense.n} </span>${sense.title}<span class="ground-count"></span>`;
             const inputs = document.createElement('div');
             inputs.className = 'ground-inputs';
             for (let i = 1; i <= sense.n; i++) {

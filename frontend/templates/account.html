@@ -16,7 +16,7 @@
     <h2 id="profile-h">Provider profile</h2>
     <p class="muted">Patients see this on their Care Team page, so they know who they're sharing their health documents with.</p>
     {% if current_user.verified_organization %}
-        <p class="notice"><strong>✓ Verified:</strong> your email address is at {{ current_user.verified_organization }}, so patients see you as verified.</p>
+        <p class="notice"><strong>Verified:</strong> your email address is at {{ current_user.verified_organization }}, so patients see you as verified.</p>
     {% else %}
         <p class="notice">Unverified: patients see this profile as self-reported. Providers are verified automatically when they sign in
             with an email address at a partner hospital or clinic.</p>
